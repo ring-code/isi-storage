@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Fulfill Order #{{ customer_order.id }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h3>Fulfill Order #{{ customer_order.id }}</h3>
+        <p class="text-muted">Assign specific, available physical units to each item in the order.</p>
+
+         <form method="POST">
+            {{ form.hidden_tag() }}
+
+            {% for item in customer_order.order_items %}
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ item.public_variation.public_product.name }}</strong> (x{{ item.quantity }})<br>
+                        <small class="text-muted">Variation: {{ item.public_variation.manufacturing_product.name }}</small>
+                    </div>
+                    {% if item.booking %}
+                        <span class="badge badge-success">✅ Fulfilled</span>
+                    {% else %}
+                        <span class="badge badge-warning">📝 Pending Assignment</span>
+                    {% endif %}
+                </div>
+
+                {# Only show the selection box for unfulfilled items #}
+                {% if not item.booking %}
+                <div class="card-body">
+                    {% set available_units = get_available_units(item) %}
+                    {% if available_units %}
+                        <div class="form-group">
+                            <label for="item_{{ item.id }}_units">Select {{ item.quantity }} available unit(s) to assign:</label>
+                            
+                            <div class="unit-checkbox-list" style="height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
+                            {% for unit in available_units %}
+                            <div class="form-check">
+                                
+                                <input class="form-check-input" type="checkbox" name="item_{{ item.id }}_units" value="{{ unit.unit_id }}" id="unit_{{ unit.unit_id }}">
+
+                                <label class="form-check-label" for="unit_{{ unit.unit_id }}">
+                                    {{ unit.serial_number }} (Location: {{ unit.space.name if unit.space else 'N/A' }})
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                            <small class="form-text text-muted">You must select exactly {{ item.quantity }} unit(s).</small>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-danger">
+                            <strong>No units available!</strong> There is not enough available stock to fulfill this item.
+                        </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            {{ form.submit(class="btn btn-primary btn-lg") }}
+
+            <a href="{{ url_for('sales.list_unfulfilled_orders') }}" class="btn btn-light">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

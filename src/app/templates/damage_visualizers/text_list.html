@@ -1,0 +1,15 @@
+{# This component expects 'unit' and 'damage_form' to be passed from the parent template #}
+<h4 class="mt-4">Add New Damage Report</h4>
+<form method="POST" action="{{ url_for('main.edit_unit', unit_id=unit.unit_id) }}" class="card card-body">
+    {{ damage_form.hidden_tag() }}
+    <div class="form-group">
+        {{ damage_form.description.label(class="form-label") }}
+        {{ damage_form.description(class="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ damage_form.severity.label(class="form-label") }}
+        {{ damage_form.severity(class="form-control") }}
+    </div>
+    {# x and y coordinates are not used by this form #}
+    <button type="submit" name="submit_damage" class="btn btn-primary">Add Damage Report</button>
+</form>

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Batch Create New Product Units{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h3>Batch Create New Product Units</h3>
+        <p class="text-muted">
+            Quickly add multiple, identical units to inventory. This is only available for SKUs in fully concrete categories.
+        </p>
+
+        <form method="POST" id="batch-create-form"
+              data-product-details-url-template="{{ product_details_url_template }}">
+            {{ form.hidden_tag() }}
+
+            <!-- Parent SKU Selection -->
+            <div class="card mb-4">
+                <div class="card-header">1. Select Parent SKU</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        {{ form.product_id.label(class="form-label") }}
+                        {{ form.product_id(class="form-control", id="product_select") }}
+                    </div>
+                    <div id="sku-message-container"></div> {# Message container #}
+                </div>
+            </div>
+
+            <div id="dynamic-form-fields" style="display: none;">
+
+                <!-- Serial Number Details -->
+                <div class="card mb-4">
+                    <div class="card-header">2. Serial Number Details</div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            {{ form.serial_number_prefix.label(class="form-label") }}
+                            {{ form.serial_number_prefix(class="form-control", readonly=True, placeholder="Auto-filled from SKU", id="serial_number_prefix") }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.serial_number_suffix.label(class="form-label") }}
+                            {{ form.serial_number_suffix(class="form-control", placeholder="e.g., -BLK or -V2", id="serial_number_suffix") }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.serial_start_number.label(class="form-label") }}
+                            {{ form.serial_start_number(class="form-control", type="number", min="1", id="serial_start_number") }}
+                            <small class="form-text text-success" id="serial-preview"></small>
+                        </div>
+                        <hr>
+                        <div class="form-group">
+                            {{ form.quantity.label(class="form-label") }}
+                            {{ form.quantity(class="form-control", type="number", min="1") }}
+                            <small class="form-text text-muted">{{ form.quantity.description }}</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Production Cost -->
+                <div class="card mb-4">
+                    <div class="card-header">3. Financials</div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            {{ form.actual_production_cost.label(class="form-label") }}
+                            {{ form.actual_production_cost(class="form-control", id="actual_production_cost") }}
+                            <small class="form-text text-muted">This value will be pre-filled from the parent SKU, but can be overridden for this specific batch.</small>
+                            {% if form.actual_production_cost.errors %}
+                                {% for error in form.actual_production_cost.errors %}
+                                    <small class="form-text text-danger">{{ error }}</small>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Commercial Grade -->
+                <div class="card mb-4">
+                    <div class="card-header">3. Commercial Grade</div>
+                    <div class="card-body" id="commercial-grades-container">
+                        <p class="text-muted"><small>Select one grade. The available grades are determined by the SKU's category.</small></p>
+                        <div class="form-group">
+                            {{ form.rental_grade_id.label(class="form-label") }}
+                            {{ form.rental_grade_id(class="form-control", id="rental_grade_id") }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.sale_grade_id.label(class="form-label") }}
+                            {{ form.sale_grade_id(class="form-control", id="sale_grade_id") }}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Global Attributes -->
+                <div class="card mb-4">
+                    <div class="card-header">4. Global Attributes (Optional)</div>
+                    <div class="card-body" id="attributes-container">
+                        <!-- JS will render attributes here -->
+                    </div>
+                </div>
+                
+                <!-- Location -->
+                <div class="card mb-4">
+                    <div class="card-header">5. Initial Location</div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            {{ form.space.label(class="form-label") }}
+                            {{ form.space(class="form-control") }}
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-success btn-lg">{{ form.submit.label }}</button>
+            </div>
+            
+            <a href="{{ url_for('main.view_products') }}" class="btn btn-light">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dynamic_inputs.js') }}"></script>
+<script src="{{ url_for('static', filename='js/product_form_manager.js') }}"></script> 
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('batch-create-form');
+    if (!form) return;
+
+    const productDetailsUrlTemplate = form.dataset.productDetailsUrlTemplate;
+
+    const containerIds = {
+        dynamicRoot: 'dynamic-form-fields',
+        messageContainer: 'sku-message-container',
+        serialNumbers: {
+            prefix: 'serial_number_prefix',
+            suffix: 'serial_number_suffix',
+            startNumber: 'serial_start_number',
+            preview: 'serial-preview'
+        },
+        financials: {
+            cost: 'actual_production_cost'
+        },
+        commercialGrades: {
+            rental: 'rental_grade_id',
+            sale: 'sale_grade_id'
+        },
+        attributes: 'attributes-container'
+    };
+
+    const existingValues = {
+        isUnitCreate: true
+    };
+
+    ProductFormManager.init(
+        productDetailsUrlTemplate,
+        'PRODUCT_ID',
+        'product_select',
+        containerIds,
+        existingValues,
+        'dynamic-form-fields'
+    );
+});
+</script>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Current Bookings{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Current Bookings</h2>
+        <a href="{{ url_for('sales.list_unfulfilled_orders') }}" class="btn btn-secondary">
+            View Unfulfilled Orders
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0 sortable-table">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Booking ID</th>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Rental Period</th>
+                            <th>Item</th>
+                            <th>Assigned Units</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for booking in bookings %}
+                        <tr>
+                            <td><strong>#{{ booking.id }}</strong></td>
+                            <td>
+                                {% if booking.order_items %}
+                                    <a href="{{ url_for('sales.add_items_to_order', customer_order_id=booking.order_items[0].customer_order_id) }}">
+                                        #{{ booking.order_items[0].customer_order_id }}
+                                    </a>
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ booking.order_items[0].customer_order.customer.first_name if booking.order_items else 'N/A' }}
+                            </td>
+                            <td>{{ booking.start_date.strftime('%b %d, %Y') }} to {{ booking.end_date.strftime('%b %d, %Y') }}</td>
+                            <td>
+                                {% if booking.order_items %}
+                                    <ul class="list-unstyled mb-0">
+                                    {% for item in booking.order_items %}
+                                        <li>
+                                            <small>
+                                                {{ item.quantity }}x {{ item.public_variation.manufacturing_product.name }}
+                                                ({{ item.public_variation.public_product.name }})
+                                            </small>
+                                        </li>
+                                    {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                <ul class="list-unstyled mb-0">
+                                {% for unit in booking.units %}
+                                    <li><small>{{ unit.serial_number }}</small></li>
+                                {% endfor %}
+                                </ul>
+                            </td>
+                            <td class="text-right">
+                                <form method="POST" action="{{ url_for('sales.cancel_booking', booking_id=booking.id) }}" onsubmit="return confirm('Are you sure?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-warning btn-sm">Cancel Booking</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted"><em>No active bookings found.</em></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

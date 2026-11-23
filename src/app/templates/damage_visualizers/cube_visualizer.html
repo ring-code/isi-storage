@@ -1,0 +1,62 @@
+{# This component expects 'unit' and 'damage_form' to be passed from the parent template #}
+<h4 class="mt-4">Damage Management</h4>
+
+<!-- SVG Image for Damage Management -->
+<div id="damage-management" style="position: relative; width: 100%; max-width: 400px; cursor: pointer;">
+    <img id="damage-image" src="{{ url_for('static', filename='photos/FC.svg') }}" class="img-fluid" alt="Cube Diagram" style="width: 100%;">
+    {# Loop through existing damages to place dots #}
+    {% for damage in unit.damages if damage.x_coordinate is not none %}
+    <div class="damage-dot" 
+         style="position: absolute; left: {{ damage.x_coordinate }}%; top: {{ damage.y_coordinate }}%;"
+         title="{{ damage.description }} ({{ damage.severity }})">
+    </div>
+    {% endfor %}
+</div>
+<small class="form-text text-muted">Click on the diagram to report a new damage location.</small>
+
+<!-- Modal for adding damage -->
+<div class="modal fade" id="damageModal" tabindex="-1" aria-labelledby="damageModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="damageModalLabel">Add New Damage Report</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="damage-form" method="POST" action="{{ url_for('main.edit_unit', unit_id=unit.unit_id) }}">
+                    {{ damage_form.hidden_tag() }}
+                    <div class="form-group">
+                        {{ damage_form.description.label(class="form-label") }}
+                        {{ damage_form.description(class="form-control") }}
+                    </div>
+                    <div class="form-group">
+                        {{ damage_form.severity.label(class="form-label") }}
+                        {{ damage_form.severity(class="form-control") }}
+                    </div>
+                    {{ damage_form.x_coordinate(id="x_coordinate") }}
+                    {{ damage_form.y_coordinate(id="y_coordinate") }}
+                    <button type="submit" name="submit_damage" class="btn btn-primary">Add Damage</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('damage-image').addEventListener('click', function(event) {
+    const rect = event.target.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const xPercentage = (x / rect.width) * 100;
+    const yPercentage = (y / rect.height) * 100;
+
+    // Set coordinates in the modal's hidden form fields
+    document.getElementById('x_coordinate').value = xPercentage.toFixed(2);
+    document.getElementById('y_coordinate').value = yPercentage.toFixed(2);
+
+    // Show the Bootstrap modal using jQuery
+    $('#damageModal').modal('show');
+});
+</script>

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Option List: {{ option_list.name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h3>Edit Option List</h3>
+        <p class="text-info"><i class="fas fa-info-circle"></i> Core properties cannot be changed after creation. Existing items are locked to ensure data integrity.</p>
+        
+        <form method="POST" id="edit-option-list-form" novalidate>
+            {{ form.hidden_tag() }}
+            {{ form.id() }}
+            
+            <div class="form-group">
+                {{ form.name.label(class="form-label") }}
+                {{ form.name(class="form-control") }}
+            </div>
+            <hr>
+
+            <!-- DISABLED FIELDS - Shown for context -->
+            <div class="form-group">
+                <label class="form-label">Data Type of Items</label>
+                <input type="text" class="form-control" value="{{ option_list.item_data_type.name }}" readonly>
+            </div>
+             <div class="form-group form-check">
+                <input type="checkbox" class="form-check-input" disabled {% if option_list.allow_multiple_selections %}checked{% endif %}>
+                <label class="form-check-label">Allow multiple items to be selected?</label>
+            </div>
+
+            <!-- EDITABLE FIELDS -->
+            <div class="form-group" id="display-hint-container">
+                {{ form.display_hint.label(class="form-label") }}
+                {{ form.display_hint(class="form-control") }}
+            </div>
+
+            <hr>
+            <h5>List Items</h5>
+            <div id="list-items-container">
+                <!-- Dynamic inputs will be rendered here by JS -->
+            </div>
+            
+            <hr>
+            <button type="submit" class="btn btn-primary">Update Option List</button>
+            <a href="{{ url_for('definitions.manage_option_lists') }}" class="btn btn-light">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/dynamic_inputs.js') }}"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // --- GET DATA FROM SERVER ---
+        const dataTypeMap = JSON.parse('{{ data_type_map_json|safe }}');
+        const existingItems = JSON.parse('{{ existing_items_json|safe }}');
+        const isMultiSelect = {{ option_list.allow_multiple_selections|tojson }};
+        
+        const itemDataTypeId = '{{ option_list.item_data_type_id }}';
+        
+        // --- UI ELEMENTS ---
+        const itemsContainer = document.getElementById('list-items-container');
+        const displayHintContainer = document.getElementById('display-hint-container');
+
+        // --- RENDER & INITIALIZE ---
+        
+        // Show/hide the display hint dropdown based on the list type
+        displayHintContainer.style.display = isMultiSelect ? 'none' : 'block';
+
+        // Get the specific data type object for the list items
+        const itemDataType = dataTypeMap[itemDataTypeId];
+
+        // Call universal library renderer.
+        DynamicInputs.renderListOfInputs(
+            itemsContainer, 
+            itemDataType, 
+            existingItems, 
+            true, // isEditMode = true
+            'items'
+        );
+    })
+    </script>
+{% endblock %}

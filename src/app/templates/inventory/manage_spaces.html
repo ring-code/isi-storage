@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Storage Spaces{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    
+    {# --- TOP SECTION: List of Spaces --- #}
+    <div class="row mb-5">
+        <div class="col-12"> 
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2>Storage Spaces</h2>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-striped table-hover sortable-table clickable-rows">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th><span class="sort-handle">Location Code / Name</span></th>
+                            <th><span class="sort-handle">Description</span></th>
+                            <th>Inventory Preview</th>
+                            <th class="text-right" style="min-width: 200px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for space in all_spaces %}
+                        <tr data-href="{{ url_for('inventory.manage_spaces', edit=space.id) }}#edit-form">
+                            <td><strong>{{ space.name }}</strong></td>
+                            <td><small class="text-muted">{{ space.description or '--' }}</small></td>
+                            <td>
+                                {# --- Inventory Preview Logic --- #}
+                                {% set total_units = space.product_units.count() %}
+                                {% if total_units == 0 %}
+                                    <span class="badge badge-light text-muted">Empty</span>
+                                {% else %}
+                                    <span class="badge badge-info mb-1">{{ total_units }} Items</span><br>
+                                    <div style="font-size: 0.8rem; line-height: 1.2;" class="text-muted">
+                                        {# Show up to 5 serial numbers as a preview #}
+                                        {% for unit in space.product_units.limit(5) %}
+                                            {{ unit.serial_number }}{% if not loop.last %}, {% endif %}
+                                        {% endfor %}
+                                        {% if total_units > 5 %}
+                                            <br><em>...and {{ total_units - 5 }} more</em>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td class="text-right">
+                                <div class="btn-group">
+                                    <a href="{{ url_for('inventory.view_space_inventory', space_id=space.id) }}" class="btn btn-primary btn-sm" title="View all items in this space">Inventory</a>
+                                    
+                                    <form method="POST" action="{{ url_for('inventory.delete_space', space_id=space.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this space?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                        <button type="submit" class="btn btn-danger btn-sm" 
+                                                {% if total_units > 0 %}
+                                                    disabled title="Cannot delete a space that contains items. Move the items first."
+                                                {% endif %}>
+                                            Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted"><em>No storage spaces defined. Create one to get started.</em></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <hr class="mb-5">
+
+    {# --- BOTTOM SECTION: Create/Edit Form --- #}
+    <div class="row" id="edit-form">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        {% if edit_space %}Edit "{{ edit_space.name }}"{% else %}Create New Space{% endif %}
+                    </h4>
+                    {% if edit_space %}
+                        <a href="{{ url_for('inventory.manage_spaces') }}" class="btn btn-light btn-sm">Cancel Edit</a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('inventory.manage_spaces') }}">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="form-group">
+                            {{ form.name.label(class="form-label font-weight-bold") }}
+                            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="e.g., Shelf A2, Warehouse Rack 4") }}
+                            {% for error in form.name.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="form-group">
+                            {{ form.description.label(class="form-label font-weight-bold") }}
+                            {{ form.description(class="form-control", rows=3, placeholder="Optional details about this location.") }}
+                        </div>
+                        
+                        <hr>
+                        {{ form.submit(class="btn btn-success btn-lg btn-block") }}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

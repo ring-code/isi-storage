@@ -1,0 +1,21 @@
+# ALWAYS ignore .env & secrets
+.env
+secrets/
+
+# Ignore Python cache files everywhere
+__pycache__/
+*.py[cod]
+
+# Ignore JetBrains IDE folder
+.idea/
+
+# Ignore macOS folder attributes
+.DS_Store
+
+# Ignore Vercel deployment folder
+.vercel
+
+# Ignore log files
+*.log
+logs.txt
+*.log.*

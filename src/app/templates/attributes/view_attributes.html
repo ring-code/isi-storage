@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Global Attributes{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Global Attributes</h2>
+        <a href="{{ url_for('definitions.manage_attribute') }}" class="btn btn-success">
+            New Attribute
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0 sortable-table clickable-rows">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th><span class="sort-handle">Attribute Name</span></th>
+                            <th><span class="sort-handle">Data Type</span></th>
+                            <th><span class="sort-handle">WooCommerce Sync Behavior</span></th>
+                            <th><span class="sort-handle">Status</span></th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for attr in all_attributes %}
+                        <tr data-href="{{ url_for('definitions.manage_attribute', attribute_id=attr.attribute_id) }}">
+                            <td><strong>{{ attr.name }}</strong></td>
+                            <td>{{ attr.data_type.name if attr.data_type else 'N/A' }}</td>
+                            <td>
+                                {% if attr.sync_behavior == 'sync_as_variation' %}
+                                    <span class="badge badge-primary">Variation Attribute</span>
+                                {% elif attr.sync_behavior == 'sync_as_global' %}
+                                    <span class="badge badge-info">Global Attribute</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Not Synced</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if attr.specification_definitions %}
+                                    <span class="badge badge-primary" title="This attribute is linked to one or more specifications and its name cannot be changed.">🔒 In Use</span>
+                                {% else %}
+                                    <span class="text-muted">--</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-right">
+                                <a href="{{ url_for('definitions.manage_attribute', attribute_id=attr.attribute_id) }}" class="btn btn-secondary btn-sm">Edit</a>
+                                <form method="POST" action="{{ url_for('definitions.delete_attribute', attribute_id=attr.attribute_id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this attribute? This cannot be undone.');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-danger btn-sm" {% if attr.specification_definitions or attr.product_attributes %}disabled{% endif %}>Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">
+                                <em>No attributes found. <a href="{{ url_for('definitions.manage_attribute') }}">Create one to get started.</a></em>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

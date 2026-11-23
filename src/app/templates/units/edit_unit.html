@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Unit: {{ unit.serial_number }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h3>Unit Dashboard: <strong>{{ unit.serial_number }}</strong></h3>
+        <p class="text-muted">Parent SKU: <a href="{{ url_for('main.manage_product', product_id=unit.product_id) }}">{{ unit.product.name }}</a></p>
+
+        {# --- CORE DETAILS CARD --- #}
+        <div class="card mb-4">
+            <div class="card-header"><h3>Core Details</h3></div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    <div class="form-row">
+                        <div class="form-group col-md-6">{{ form.serial_number.label }} {{ form.serial_number(class="form-control") }}</div>
+                        <div class="form-group col-md-6">{{ form.condition.label }} {{ form.condition(class="form-control") }}</div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">{{ form.rental_grade_id.label }} {{ form.rental_grade_id(class="form-control") }}</div>
+                        <div class="form-group col-md-6">{{ form.sale_grade_id.label }} {{ form.sale_grade_id(class="form-control") }}</div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group col-md-6">{{ form.space.label }} {{ form.space(class="form-control") }}</div>
+                        <div class="form-group col-md-6">{{ form.actual_production_cost.label }} {{ form.actual_production_cost(class="form-control") }}</div>
+                    </div>
+                    <div class="form-group">{{ form.description.label }} {{ form.description(class="form-control", rows=3) }}</div>
+                    
+                    <h3>Specifications</h3>
+                    <div id="specifications-container" class="mt-4">
+                        <p class="text-muted"><em>Loading specifications...</em></p>
+                    </div>
+
+                    <h3>Attributes</h3>
+                    <div id="attributes-container" class="mt-4">
+                        <p class="text-muted"><em>Loading...</em></p>
+                    </div>
+
+                    <button type="submit" name="submit_main_details" class="btn btn-primary mt-3">Save Changes</button>
+                </form>
+            </div>
+        </div>
+
+
+        {# --- ASSET TAG CARD --- #}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Asset Tag / QR Code</h3>
+            </div>
+            <div class="card-body">
+                {% if unit.asset_tag %}
+                    {# --- STATE 1: TAG IS ASSIGNED --- #}
+                    <div class="row align-items-center">
+                        <div class="col-md-4 text-center">
+                            <div id="qrcode-display" style="width: 150px; height: 150px; margin: 0 auto;"></div>
+                        </div>
+                        <div class="col-md-8">
+                            <p><strong>Tag Value:</strong><br><code>{{ unit.asset_tag.code_value }}</code></p>
+                            <p><strong>Status:</strong> <span class="badge badge-success">{{ unit.asset_tag.status }}</span></p>
+                            
+                            <div class="mt-3">
+                                <a href="{{ url_for('inventory.print_tag', tag_id=unit.asset_tag.id) }}" target="_blank" class="btn btn-info">Print</a>
+                                
+                                <form method="POST" action="{{ url_for('inventory.decommission_and_reassign_tag', unit_id=unit.unit_id) }}" class="d-inline" onsubmit="return confirm('Are you sure? This will decommission the current tag and generate a brand new one.');">
+                                    {{ action_form.hidden_tag() }}
+                                    <button type="submit" class="btn btn-warning">Decommission & Assign New</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    {# --- STATE 2: NO TAG ASSIGNED --- #}
+                    <div class="text-center">
+                        <p class="text-muted">No QR Code is currently assigned to this unit.</p>
+                        <form method="POST" action="{{ url_for('inventory.generate_and_assign_tag', unit_id=unit.unit_id) }}">
+                            {{ action_form.hidden_tag() }}
+                            <button type="submit" class="btn btn-primary">Generate & Assign New QR Code</button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# --- DAMAGE CARD --- #}
+        <div class="card mb-4">
+            <div class="card-header">Damage Reports ({{ unit.damage_count }})</div>
+            <div class="card-body">
+                {# --- DYNAMIC VISUALIZER --- #}
+                {% if unit.product.damage_template %}
+                    {% include 'damage_visualizers/' + unit.product.damage_template.visualization_component + '.html' %}
+                {% else %}
+                    {# Default to the text list if no template is set #}
+                    {% include 'damage_visualizers/text_list.html' %}
+                {% endif %}
+                
+                <hr>
+                <h4 class="mt-4">Existing Reports</h4>
+                <ul class="list-group">
+                    {% for damage in unit.damages %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ damage.description }} (Severity: {{ damage.severity }})</span>
+                        <form method="POST" action="{{ url_for('inventory.delete_damage', damage_id=damage.damage_id) }}" onsubmit="return confirm('Delete this damage report?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-danger">&times;</button>
+                        </form>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item">No damages reported.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        
+    </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<style>
+    .damage-dot { width: 15px; height: 15px; background-color: rgba(255, 0, 0, 0.7); border-radius: 50%; border: 1px solid white; transform: translate(-50%, -50%); }
+</style>
+<script src="{{ url_for('static', filename='js/dynamic_inputs.js') }}"></script>
+<script src="{{ url_for('static', filename='js/product_form_manager.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const containerIds = {
+        specifications: 'specifications-container',
+        attributes: 'attributes-container'
+    };
+
+    const existingValues = {
+        isEditMode: true,
+        isUnitCreate: true,
+        
+        specs: {{ unit_spec_values|tojson|safe }},
+        attrs: {{ unit_attr_values|tojson|safe }}
+    };
+
+    ProductFormManager.initOnLoad(
+        '{{ product_details_url }}',
+        containerIds,
+        existingValues
+    );
+
+    const qrCodeContainer = document.getElementById('qrcode-display');
+    
+    // Check if a unit and asset tag exist (Jinja variable is available here)
+    {% if unit and unit.asset_tag %}
+        if (qrCodeContainer) {
+            // Use the QRCode.js library to render the code
+            new QRCode(qrCodeContainer, {
+                text: "{{ unit.asset_tag.code_value }}",
+                width: 150,
+                height: 150,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        }
+    {% endif %}
+});
+</script>
+{% endblock %}

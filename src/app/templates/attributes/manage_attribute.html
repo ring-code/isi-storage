@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if attribute %}
+        Edit Attribute: {{ attribute.name }}
+    {% else %}
+        Create New Attribute
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h3>
+            {% if attribute %}
+                Edit Attribute: <strong>{{ attribute.name }}</strong>
+            {% else %}
+                Create New Attribute
+            {% endif %}
+        </h3>
+        
+        <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                {{ form.name.label(class="form-label") }}
+
+
+                {% if attribute and attribute.specification_definitions %}
+                    {{ form.name(class="form-control is-valid", readonly=True) }}
+                    <small class="form-text text-warning">Name cannot be changed because this attribute is in use by a specification.</small>
+                {% else %}
+                    {{ form.name(class="form-control" ~ (' is-invalid' if form.name.errors else '')) }}
+                {% endif %}
+
+                {% for error in form.name.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.sync_behavior.label(class="form-label") }}
+                {{ form.sync_behavior(class="form-control" ~ (' is-invalid' if form.sync_behavior.errors else '')) }}
+                {% for error in form.sync_behavior.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+            <hr>
+
+            {# --- Data source fields are ONLY shown on CREATE --- #}
+            {% if not attribute %}
+                <h5>Data Source</h5>
+                <p class="text-muted"><small>Choose EITHER a predefined list of options OR a simple data type. This cannot be changed after creation.</small></p>
+                <div class="form-group">
+                    {{ form.option_list.label(class="form-label") }}
+                    {{ form.option_list(class="form-control" ~ (' is-invalid' if form.option_list.errors else ''), id="option_list_select") }}
+                </div>
+                <div class="form-group" id="data-type-group">
+                    {{ form.data_type.label(class="form-label") }}
+                    {{ form.data_type(class="form-control" ~ (' is-invalid' if form.data_type.errors else ''), id="data_type_select") }}
+                     {% for error in form.data_type.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+            {% else %}
+                {# On EDIT, show read-only info about the data source #}
+                 <div class="form-group">
+                    <label class="form-label">Data Type</label>
+                    <input type="text" class="form-control" value="{{ attribute.data_type.name if attribute.data_type else 'N/A' }}" readonly>
+                </div>
+                {% if attribute.option_list %}
+                <div class="form-group">
+                    <label class="form-label">Uses Option List</label>
+                    <input type="text" class="form-control" value="{{ attribute.option_list.name }}" readonly>
+                </div>
+                {% endif %}
+            {% endif %}
+            
+            <hr>
+            <button type="submit" class="btn btn-primary">Save Attribute</button>
+            <a href="{{ url_for('definitions.view_attributes') }}" class="btn btn-light">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+{% if not attribute %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const optionListSelect = document.getElementById('option_list_select');
+    const dataTypeSelect = document.getElementById('data_type_select');
+    const dataTypeGroup = document.getElementById('data-type-group');
+
+    function updateDataSourceFields() {
+        const optionListValue = optionListSelect.value;
+        const dataTypeValue = dataTypeSelect.value;
+
+        if (optionListValue && optionListValue !== '__None') {
+            // If an option list is selected, hide and clear the data type field
+            dataTypeGroup.style.display = 'none';
+            dataTypeSelect.value = ''; // Use empty string to clear selection
+        } else {
+            // Otherwise, show the data type field
+            dataTypeGroup.style.display = 'block';
+        }
+    }
+
+    // Add event listeners to both dropdowns
+    optionListSelect.addEventListener('change', updateDataSourceFields);
+    dataTypeSelect.addEventListener('change', function() {
+        // This is a bit of a UX choice, but if a user interacts with the data type
+        // dropdown, we assume they don't want the option list.
+        if (this.value && this.value !== '__None') {
+            optionListSelect.value = '__None';
+            // We call the other function to ensure the UI is consistent
+            updateDataSourceFields();
+        }
+    });
+
+    // Run once on page load to set the initial state
+    updateDataSourceFields();
+});
+</script>
+{% endif %}
+{% endblock %}

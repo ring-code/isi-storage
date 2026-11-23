@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if form.id.data %}
+        Edit Public Product
+    {% else %}
+        Create New Public Product
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h3>
+            {% if form.id.data %}
+                Edit Public Product
+            {% else %}
+                Create New Public Product
+            {% endif %}
+        </h3>
+        <p class="text-muted">A Public Product links a commercial Grade to a set of public Shop Categories, automatically including all eligible internal SKUs as variations.</p>
+
+        <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="card mb-4">
+                <div class="card-header">1. Select Commercial Grade</div>
+                <div class="card-body">
+                    
+                    {% if form.id.data %}
+                        {# --- EDIT MODE: Show read-only grade info --- #}
+                        
+                        {# Find the grade object using the queries passed from the route #}
+                        {% set grade = None %}
+                        {% if public_product.grade_type == 'rental_grade' %}
+                            {% set grade = rental_grades.filter_by(id=public_product.grade_id).first() %}
+                        {% elif public_product.grade_type == 'sale_grade' %}
+                            {% set grade = sale_grades.filter_by(id=public_product.grade_id).first() %}
+                        {% endif %}
+                        
+                        <p><strong>Grade:</strong> 
+                            {% if grade %}
+                                {% if grade.color %}<span class="color-swatch" style="background-color:{{ grade.color }};"></span>{% endif %}
+                                {{ grade.name }}
+                            {% else %}
+                                <span class="text-danger">N/A - Grade not found</span>
+                            {% endif %}
+                        </p>
+                        <small class="form-text text-warning">The grade cannot be changed after a Public Product is created. To use a different grade, you must create a new Public Product.</small>
+
+                    {% else %}
+                        {# --- CREATE MODE: Show the interactive dropdowns --- #}
+                        
+                        <p class="text-muted">Select one grade to define the pricing for this product. The grade must have a price and tax rate set.</p>
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                {{ form.rental_grade.label(class="form-label") }}
+                                {{ form.rental_grade(class="form-control" ~ (' is-invalid' if form.rental_grade.errors else ''), id="rental_grade_select") }}
+                                {% for error in form.rental_grade.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                            </div>
+                            <div class="form-group col-md-6">
+                                {{ form.sale_grade.label(class="form-label") }}
+                                {{ form.sale_grade(class="form-control" ~ (' is-invalid' if form.sale_grade.errors else ''), id="sale_grade_select") }}
+                                {% for error in form.sale_grade.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {# The dynamic info display div is always present for the JS to use #}
+                    <div id="grade-details-display" class="alert alert-info mt-3" style="display: none;">
+                        <!-- JS will populate this -->
+                    </div>
+
+                </div>
+            </div>
+
+            
+            <div class="card mb-4">
+                <div class="card-header">2. Public Details</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        {{ form.name.label(class="form-label") }}
+                        {{ form.name(class="form-control" ~ (' is-invalid' if form.name.errors else '')) }}
+                        <small class="form-text text-muted">{{ form.name.description }}</small>
+                        {% for error in form.name.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.public_sku.label(class="form-label") }}
+                        {{ form.public_sku(class="form-control" ~ (' is-invalid' if form.public_sku.errors else '')) }}
+                        <small class="form-text text-muted">{{ form.public_sku.description }}</small>
+                        {% for error in form.public_sku.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg">{{ form.submit.label }}</button>
+            <a href="{{ url_for('sales.view_public_products') }}" class="btn btn-light">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

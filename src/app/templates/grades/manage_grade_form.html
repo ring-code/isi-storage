@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if grade %}
+        Edit {{ grade_type }} Grade: {{ grade.name }}
+    {% else %}
+        Create New {{ grade_type }} Grade
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h3>
+            {% if grade %}
+                Edit {{ grade_type }} Grade: <strong>{{ grade.name }}</strong>
+            {% else %}
+                Create New {{ grade_type }} Grade
+            {% endif %}
+        </h3>
+        
+        {% if grade %}
+            {# EDIT mode: We have a grade.id #}
+            {% set action_url = url_for('sales.manage_rental_grade', grade_id=grade.id) if grade_type == 'Rental' else url_for('sales.manage_sale_grade', grade_id=grade.id) %}
+        {% else %}
+            {# CREATE mode: No grade.id exists yet #}
+            {% set action_url = url_for('sales.manage_rental_grade') if grade_type == 'Rental' else url_for('sales.manage_sale_grade') %}
+        {% endif %}
+
+        <form method="POST" action="{{ action_url }}" novalidate>
+            {{ form.hidden_tag() }}
+            {{ form.id() }}
+            
+            <div class="form-group">
+                {{ form.name.label(class="form-label") }}
+                {{ form.name(class="form-control" ~ (' is-invalid' if form.name.errors else '')) }}
+                {% for error in form.name.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+            <hr>
+
+            {# --- DYNAMIC PRICE FIELDS --- #}
+            <h5>Pricing</h5>
+            {% if grade_type == 'Rental' %}
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label class="form-label" for="{{ form.first_day_price.id }}">
+                            {{ form.first_day_price.label.text }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.first_day_price(class="form-control" ~ (' is-invalid' if form.first_day_price.errors else '')) }}
+                        {% for error in form.first_day_price.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label class="form-label" for="{{ form.next_day_price.id }}">
+                            {{ form.next_day_price.label.text }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.next_day_price(class="form-control" ~ (' is-invalid' if form.next_day_price.errors else '')) }}
+                        {% for error in form.next_day_price.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+            {% else %} {# Sale Grade #}
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.sale_price.id }}">
+                        {{ form.sale_price.label.text }} <span class="text-danger">*</span>
+                    </label>
+                    {{ form.sale_price(class="form-control" ~ (' is-invalid' if form.sale_price.errors else '')) }}
+                    {% for error in form.sale_price.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+            {% endif %}
+
+            {# --- TAX AND COLOR FIELDS --- #}
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    {{ form.tax_rate.label(class="form-label") }}
+                    {{ form.tax_rate(class="form-control" ~ (' is-invalid' if form.tax_rate.errors else ''), placeholder="e.g. 0.19") }}
+                    {% for error in form.tax_rate.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-group col-md-6">
+                    {{ form.color.label(class="form-label") }}
+                    {# The ColorField automatically renders as type="color" #}
+                    {{ form.color(class="form-control" ~ (' is-invalid' if form.color.errors else '')) }}
+                    {% for error in form.color.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+            
+            <hr>
+            <h5>Rules & Availability</h5>
+            <div class="form-group">
+                {{ form.shipping_class_slug.label(class="form-label") }}
+                {{ form.shipping_class_slug(class="form-control" ~ (' is-invalid' if form.shipping_class_slug.errors else '')) }}
+                {% for error in form.shipping_class_slug.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+
+            {% if grade_type == 'Sale' %}
+                <div class="form-group form-check">
+                    {{ form.is_convertible_to_rental(class="form-check-input") }}
+                    {{ form.is_convertible_to_rental.label(class="form-check-label") }}
+                </div>
+            {% endif %}
+
+            <div class="form-group">
+                {{ form.available_in_categories.label(class="form-label") }}
+                {{ form.available_in_categories(class="form-control", size=8) }}
+                <small class="form-text text-muted">Hold Ctrl (or Cmd on Mac) to select multiple categories.</small>
+            </div>
+            
+            <hr>
+            <button type="submit" class="btn btn-primary">Save {{ grade_type }} Grade</button>
+            <a href="{{ url_for('sales.manage_grades') }}" class="btn btn-light">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+

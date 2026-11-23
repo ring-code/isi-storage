@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Data Types{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-5">
+    <!-- Section 1: List of Existing Data Types -->
+    <div class="row mb-5">
+        <div class="col-12"> 
+            <h2>Existing Data Types</h2>
+            <p class="text-muted">These are the fundamental, atomic building blocks for all properties in the system. They allow to choose the preferred method of input via HTML and to control that input with validation.   </p>
+            <table class="table table-striped table-hover sortable-table clickable-rows">
+                <thead class="thead-dark">
+                    <tr>
+                        <th><span class="sort-handle">Data Type Name</span></th>
+                        <th><span class="sort-handle">Display Type</span></th>
+                        <th><span class="sort-handle">Validation Rules</span></th>
+                        <th><span class="sort-handle">Status</span></th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for data_type in all_data_types %}
+                    <tr data-href="{{ url_for('definitions.manage_data_types', edit=data_type.id) }}#edit-form">
+                        <td><strong>{{ data_type.name }}</strong></td>
+                        <td><span class="badge badge-info">{{ data_type.display_type }}</span></td>
+                        <td>
+                            {% if data_type.validation_rules %}
+                                <span class="badge badge-success">Yes</span>
+                            {% else %}
+                                <span class="text-muted">--</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not data_type.is_deletable %}
+                                <span class="badge badge-primary" title="This Data Type is in use and cannot be deleted.">🔒 In Use</span>
+                            {% else %}
+                                --
+                            {% endif %}
+                        </td>
+                        <td class="text-right">
+                            <a href="{{ url_for('definitions.manage_data_types', edit=data_type.id) }}#edit-form" class="btn btn-secondary btn-sm">Edit</a>
+                            <form method="POST" action="{{ url_for('definitions.delete_data_type', data_type_id=data_type.id) }}" class="d-inline" onsubmit="return confirm('Delete this Data Type?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <button type="submit" class="btn btn-danger btn-sm" 
+                                    {% if not data_type.is_deletable %}
+                                        disabled title="Cannot delete: This Data Type is currently in use."
+                                    {% endif %}>
+                                    Delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted"><em>No data types found. Create one to get started.</em></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <hr>
+
+    <!-- Section 2: The Create/Edit Form -->
+    <div class="row" id="edit-form">
+        <div class="col-md-8 offset-md-2">
+            {% if edit_type %}
+                <h3>Edit Data Type "{{ edit_type.name }}"</h3>
+            {% else %}
+                <h3>Create New Data Type</h3>
+            {% endif %}
+            
+            <form method="POST" action="">
+                {{ form.hidden_tag() }}
+                <div class="form-group">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="form-control") }}
+                </div>
+                <div class="form-group">
+                    {{ form.display_type.label(class="form-label") }}
+                    {{ form.display_type(class="form-control", id="display_type_select", disabled=True if edit_type else False) }}
+                    {% if edit_type %}<small class="form-text text-warning">The Display Type cannot be changed after creation.</small>{% endif %}
+                </div>
+
+                <div class="form-group" id="validation-rules-container" style="display: none;">
+                    {{ form.validation_rules.label(class="form-label") }}
+                    {{ form.validation_rules(class="form-control", rows=4, placeholder='e.g.,\n{\n  "min": 0,\n  "max": 100\n}') }}
+                    <small class="form-text text-muted" id="validation-help-text"></small>
+                </div>
+                
+                <hr>
+                <button type="submit" class="btn btn-primary">Save Data Type</button>
+                {% if edit_type %}
+                    <a href="{{ url_for('definitions.manage_data_types') }}" class="btn btn-light">Cancel</a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const displayTypeSelect = document.getElementById('display_type_select');
+    const validationContainer = document.getElementById('validation-rules-container');
+    const validationHelpText = document.getElementById('validation-help-text');
+   
+    const validationMap = {
+        'text': 'Use "min_length", "max_length", "regex".',
+        'textarea': 'Use "min_length", "max_length".',
+        'integer': 'Use "min", "max".',
+        'float': 'Use "min", "max".',
+        'range': 'Use "min", "max".',
+        'date': 'Use "min" and "max" with date strings (e.g., "2025-12-31").',
+        'datetime-local': 'Use "min" and "max" with datetime strings (e.g., "2025-12-31T23:59").',
+        'time': 'Use "min" and "max" with time strings (e.g., "21:00").'
+    };
+
+    function toggleValidationFields() {
+        const selectedType = displayTypeSelect.value;
+
+        // Show validation container only for types that support it.
+        if (validationMap[selectedType]) {
+            validationContainer.style.display = 'block';
+            validationHelpText.innerText = validationMap[selectedType];
+        } else {
+            validationContainer.style.display = 'none';
+        }
+    }
+
+    displayTypeSelect.addEventListener('change', toggleValidationFields);
+    toggleValidationFields(); // Initial call on page load
+});
+</script>
+{% endblock %}

@@ -1,0 +1,47 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.product-info {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.product-pictures {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 150px;
+}
+
+.product-pictures img {
+    width: 100%;
+    height: auto;
+}
+
+.interactive-cube {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.cube-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+#comment-section {
+    margin-top: 20px;
+}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Create New Internal Order{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h3>Create New Internal Order</h3>
+        <p class="text-muted">Start by defining the customer and the order type (Sale or Rental).</p>
+
+        <form method="POST" id="new-order-form">
+            {{ form.hidden_tag() }}
+
+            <div class="card mb-4">
+                <div class="card-header">1. Customer Information</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        {{ form.customer.label(class="form-label") }}
+                        {{ form.customer(class="form-control" ~ (' is-invalid' if form.customer.errors else '')) }}
+                        {% for error in form.customer.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                    <p class="text-center text-muted my-3">&mdash; OR &mdash;</p>
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            {{ form.guest_email.label(class="form-label") }}
+                            {{ form.guest_email(class="form-control" ~ (' is-invalid' if form.guest_email.errors else '')) }}
+                            {% for error in form.guest_email.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="form-group col-md-4">
+                            {{ form.guest_first_name.label(class="form-label") }}
+                            {{ form.guest_first_name(class="form-control" ~ (' is-invalid' if form.guest_first_name.errors else '')) }}
+                             {% for error in form.guest_first_name.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="form-group col-md-4">
+                            {{ form.guest_last_name.label(class="form-label") }}
+                            {{ form.guest_last_name(class="form-control" ~ (' is-invalid' if form.guest_last_name.errors else '')) }}
+                             {% for error in form.guest_last_name.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">2. Order Type & Dates</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        {{ form.order_type.label(class="form-label") }}
+                        {{ form.order_type(class="form-control", id="order_type_select") }}
+                    </div>
+                    <div id="rental-dates-container">
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                {{ form.start_date.label(class="form-label") }}
+                                {{ form.start_date(class="form-control" ~ (' is-invalid' if form.start_date.errors else '')) }}
+                                {% for error in form.start_date.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                            </div>
+                            <div class="form-group col-md-6">
+                                {{ form.end_date.label(class="form-label") }}
+                                {{ form.end_date(class="form-control" ~ (' is-invalid' if form.end_date.errors else '')) }}
+                                {% for error in form.end_date.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg">{{ form.submit.label }}</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const orderTypeSelect = document.getElementById('order_type_select');
+    const rentalDatesContainer = document.getElementById('rental-dates-container');
+
+    function toggleRentalDates() {
+        if (orderTypeSelect.value === 'rental') {
+            rentalDatesContainer.style.display = 'block';
+        } else {
+            rentalDatesContainer.style.display = 'none';
+        }
+    }
+
+    orderTypeSelect.addEventListener('change', toggleRentalDates);
+    toggleRentalDates(); // Run on page load
+});
+</script>
+{% endblock %}

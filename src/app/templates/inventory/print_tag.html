@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Print QR Code: {{ tag.code_value }}</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column; 
+            align-items: center;  
+            justify-content: center;  
+            min-height: 90vh;         
+            font-family: sans-serif;
+            margin: 0;
+        }
+
+        .qr-container {
+            text-align: center; 
+        }
+
+        .code-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        .print-button {
+            margin-bottom: 30px; 
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        /* CSS rule that ONLY applies when the page is being printed */
+        @media print {
+            .no-print {
+                display: none; /* Hide any element with this class during printing */
+            }
+            body {
+                justify-content: flex-start; /* Align content to the top for printing */
+                margin-top: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    
+    <button class="print-button no-print" onclick="window.print()">Print This Tag</button>
+    
+    <div class="qr-container">
+        <div id="qrcode"></div>
+        <p class="code-value">{{ tag.code_value }}</p>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/qrcode.min.js') }}"></script>
+    <script type="text/javascript">
+        new QRCode(document.getElementById("qrcode"), {
+            text: "{{ tag.code_value }}",
+            width: 300,
+            height: 300
+        });
+    </script>
+
+</body>
+</html>

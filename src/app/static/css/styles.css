@@ -1,0 +1,266 @@
+/* styles.css */
+
+/* General layout */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    font-size: 1.1rem; /* Enlarges the base text */
+    line-height: 1.6; /* Improves readability */
+}
+
+/* Navbar styling */
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.3rem;
+}
+
+.navbar-nav .nav-item .nav-link {
+    font-size: 1.1rem;
+    padding: 12px;
+}
+
+/* Accordion content */
+.accordion .title {
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.accordion .content {
+    padding: 20px;
+    font-size: 1rem;
+}
+
+/* Main content */
+.container {
+    max-width: 100%;
+    padding: 15px;
+}
+
+/* QR Code scan button */
+.btn-secondary {
+    background-color: #6c757d;
+    border: none;
+    font-size: 1.1rem;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+/* Flash notifications */
+.alert {
+    margin-top: 15px;
+    font-size: 1rem;
+}
+
+/* Mobile device settings */
+@media (max-width: 768px) {
+    /* Enlarges headings and text */
+    h1 {
+        font-size: 2rem;
+    }
+
+    h2 {
+        font-size: 1.8rem;
+    }
+    
+    .navbar-brand {
+        font-size: 1.5rem;
+    }
+
+    .nav-item .nav-link {
+        font-size: 1.2rem;
+        padding: 10px;
+    }
+
+    /* Accordion */
+    .accordion .title {
+        font-size: 1.2rem;
+    }
+
+    .accordion .content {
+        padding: 15px;
+        font-size: 1.1rem;
+    }
+
+    /* Optimizes buttons */
+    .btn {
+        font-size: 1.2rem;
+        padding: 10px 15px;
+    }
+
+    /* Enlarges text inputs and text areas */
+    input[type="text"], select, textarea {
+        font-size: 1.1rem;
+        padding: 10px;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+}
+
+/* Further optimizations for very small screens */
+
+@media (max-width: 768px) {
+    .table {
+        font-size: 14px;
+    }
+    .navbar-nav .nav-link {
+        font-size: 16px;
+    }
+}
+
+/* Ensures input fields and forms fit the screen width */
+.container-fluid {
+    max-width: 100%;
+}
+
+/* Narrows input fields on mobile devices */
+@media (max-width: 768px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    .form-control {
+        width: 100%;
+        font-size: 1rem;
+    }
+
+    .btn {
+        width: 100%;
+        font-size: 1.1rem;
+    }
+}
+
+/* Sets width for the table */
+.table-responsive {
+    overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+    .table th, .table td {
+        font-size: 0.9rem; /* Reduces text size in cells for better fit */
+        white-space: nowrap; /* Prevents cells from breaking */
+    }
+    
+    .table thead {
+        font-size: 1rem;
+    }
+}
+
+/* Responsive navbar */
+.navbar-nav {
+    text-align: center;
+}
+
+/* Table style on mobile devices */
+@media (max-width: 768px) {
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    /* Hides the traditional table on mobile devices */
+    .table {
+        display: none;
+    }
+
+    /* Displays each row as a card on mobile devices */
+    .table-card {
+        display: block;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        background-color: #f8f9fa;
+    }
+    
+    .table-card div {
+        margin-bottom: 5px;
+    }
+    
+    .table-card div strong {
+        display: inline-block;
+        width: 35%;
+        color: #555;
+    }
+}
+
+
+.color-swatch { display: inline-block; width: 20px; height: 20px; border: 1px solid #ccc; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+.form-check-label { cursor: pointer; }
+.lock-icon {
+    cursor: pointer;
+    font-size: 1.2rem;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    margin-left: 10px; 
+}
+.lock-icon:hover {
+    opacity: 0.8;
+}
+.lock-icon.locked {
+    opacity: 1;
+    color: #007bff; 
+}
+.lock-icon.final {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.shop-category-node {
+    margin-bottom: 0.25rem;
+}
+.shop-category-node .form-check-label {
+    font-weight: normal;
+}
+
+.clickable-rows tbody tr:hover {
+        cursor: pointer;
+    }
+
+    
+/*
+ * Definitive style for sortable table headers.
+ * This targets the custom 'sort-handle' class for precise control.
+ */
+.sortable-table thead th .sort-handle {
+    cursor: pointer;
+    display: inline-block;
+    position: relative;
+    padding-right: 20px; /* Make space for a sort arrow icon */
+    /* Add a subtle underline on hover for extra clarity */
+    border-bottom: 2px solid transparent; 
+    transition: color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+
+.sortable-table thead th .sort-handle:hover {
+    color: #0056b3; /* A standard link-blue color */
+    border-bottom-color: none; 
+}
+
+/* 
+ * Styles for the sorting direction arrows.
+ * Tablesort.js adds the 'aria-sort' attribute to the <th> parent.
+ * The '::after' pseudo-element on our handle will display the arrow.
+*/
+.sortable-table thead th[aria-sort="ascending"] .sort-handle::after,
+.sortable-table thead th[aria-sort="descending"] .sort-handle::after {
+    content: '';
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+}
+
+.sortable-table thead th[aria-sort="ascending"] .sort-handle::after {
+    border-bottom: 5px solid #28253D; /* Arrow pointing up */
+    margin-top: -8px;
+}
+
+.sortable-table thead th[aria-sort="descending"] .sort-handle::after {
+    border-top: 5px solid #28253D; /* Arrow pointing down */
+    margin-top: -2px;
+}

@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% macro render_category_tree(categories, get_definitions_for_categories, get_default_values_for_categories) %}
+    {% for category in categories %}
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            {# --- Inline Name Edit --- #}
+            <div>
+                <strong id="category-name-{{ category.category_id }}">{{ category.name }}</strong>
+                {% if category.children %}<span class="badge badge-secondary ml-2">Parent</span>{% endif %}
+                <button class="btn btn-sm btn-link js-edit-cat-name p-0 ml-1" 
+                        data-id="{{ category.category_id }}" 
+                        data-current-name="{{ category.name }}"
+                        title="Edit category name">✏️</button>
+            </div>
+
+            {# --- Main Action Buttons --- #}
+            <div>
+                <a class="btn btn-outline-info btn-sm" data-toggle="collapse" href="#collapse-{{ category.category_id }}" role="button">Expand/Collapse</a>
+                <a href="{{ url_for('main.manage_specification', category_id=category.category_id) }}" class="btn btn-primary btn-sm">Add Spec</a>
+                
+                {% if category.overridden_specifications %}
+                <form method="POST" action="{{ url_for('main.reset_spec_overrides', category_id=category.category_id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-info btn-sm" title="Restore all hidden specifications for this category.">Refresh Inheritance</button>
+                </form>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('main.delete_category', category_id=category.category_id) }}" class="d-inline" onsubmit="return confirm('DELETE category \'{{ category.name }}\' and ALL its children?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+            </div>
+        </div>
+        <div class="collapse" id="collapse-{{ category.category_id }}">
+            <div class="card-body">
+                {% set applicable_defs = get_definitions_for_categories([category.category_id]) %}
+                {% set default_values = get_default_values_for_categories([category.category_id]) %}
+                
+                {% if applicable_defs %}
+                <table class="table table-sm table-bordered">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Specification Name</th>
+                            <th>Status & Rules</th>
+                            <th>Default Value</th>
+                            <th style="width: 20%;">Set Value</th> {# <-- NEW COLUMN #}
+                            <th style="width: 20%;">Actions</th>
+                        </tr>
+                    </thead>
+                        <tbody>
+                        {% for definition in applicable_defs %}
+
+                        {# --- DETERMINE ALL RULES AND STATES UP FRONT --- #}
+                        {% set is_own_def = (definition.category_id == category.category_id) %}
+                        {% set rule_override = category.rule_overrides|selectattr('definition_id', 'equalto', definition.id)|first %}
+                        {% set final_value = default_values.get(definition.name) %}
+
+                        {# The *effective* rule for 'final' and 'enforced' for THIS row, calculated from the original definition and a potential override #}
+                        {% set is_effective_final = (rule_override.forbid_override if rule_override and rule_override.forbid_override is not none else definition.forbid_override) %}
+                        {% set is_effective_enforced = (rule_override.requires_implementation if rule_override and rule_override.requires_implementation is not none else definition.requires_implementation) %}
+
+                        {# The most important variable: is this row completely locked down because a HIGHER category made the rule Final? #}
+                        {# This is true if the effective rule is Final, but this category is NOT the one that defined it OR overrode it. #}
+                        {% set is_locked_from_above = not is_own_def and is_effective_final and not rule_override %}
+
+                        <tr class="{{ 'table-secondary' if is_locked_from_above }}">
+                            <td>
+                                <strong>{{ definition.name }}</strong><br>
+                                <small class="text-muted">{{ definition.data_type.name }}</small>
+                                {% if definition.attribute %}<a href="{{ url_for('definitions.view_attributes') }}" class="badge badge-success ml-2" title="Synced to '{{ definition.attribute.name }}'">Synced</a>{% endif %}
+                            </td>
+                            <td>
+                                {# --- BADGE LOGIC --- #}
+                                {% if is_own_def %}
+                                    {% if is_effective_final %}<span class="badge badge-danger">🔒 Final</span>
+                                    {% elif is_effective_enforced %}<span class="badge badge-warning">📝 Enforced</span>
+                                    {% elif definition.is_inheritable %}<span class="badge badge-info">Inheritable</span>
+                                    {% else %}<span class="badge badge-secondary">Local Only</span>
+                                    {% endif %}
+                                {% else %} {# Inherited Spec #}
+                                    <span class="badge badge-light" title="Inherited from '{{ definition.category.name }}'">Inherited</span>
+                                    {% if rule_override and rule_override.forbid_override %}<span class="badge badge-primary">Finalized Here</span>
+                                    {% elif is_effective_final %}<span class="badge badge-danger">🔒 Final</span>
+                                    {% elif is_effective_enforced %}<span class="badge badge-warning">📝 Enforced</span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {# --- "DEFAULT VALUE" COLUMN (Display Only) --- #}
+                                {% if not final_value %}
+                                    <em class="text-muted">None</em>
+                                    {% if is_effective_enforced and not is_effective_final %}<span class="badge badge-danger ml-2">REQUIRED</span>{% endif %}
+                                {% else %}
+                                    {% set data_type = (definition.option_list.item_data_type if definition.option_list else definition.data_type) %}
+                                    {% if data_type.display_type == 'color' %}
+                                        <span class="color-swatch" style="background-color:{{ final_value }};"></span>
+                                    {% endif %}
+                                    <span class="font-italic">{{ final_value|truncate(30) }}</span>
+                                {% endif %}
+                            </td>
+                            {# --- "SET VALUE" COLUMN --- #}
+                            <td>
+                                {# Determine if the Initial Value Lock applies #}
+                                {% set is_initial_value_locked = is_own_def and category.children and is_enforced and not final_value %}
+
+                                {% if is_final_from_parent %}
+                                    <em class="text-muted">Locked by parent</em>
+                                {% elif is_initial_value_locked %}
+                                    <em class="text-muted" title="Cannot set a base value while children exist.">Locked (Has Children)</em>
+                                {% else %}
+                                    {% set effective_option_list = definition.option_list or (definition.attribute.option_list if definition.attribute else None) %}
+                                    {% set data_type = effective_option_list.item_data_type if effective_option_list else definition.data_type %}
+                                    
+                                    {% if data_type.display_type in ['textarea'] or (effective_option_list and (effective_option_list.allow_multiple_selections or effective_option_list.display_hint == 'radio')) %}
+                                        <a href="{{ url_for('main.manage_specification', spec_def_id=definition.id, category_id=category.category_id) }}" class="btn btn-outline-secondary btn-sm">Set Complex Value...</a>
+                                    {% else %}
+                                        <form method="POST" action="{{ url_for('main.set_spec_inline', category_id=category.category_id, definition_id=definition.id) }}" class="form-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            {% if effective_option_list %}
+                                                <select name="value" class="form-control form-control-sm mr-2">
+                                                    <option value="">-- None --</option>
+                                                    {% for item in effective_option_list.items %}<option value="{{ item.value }}" {% if item.value == final_value %}selected{% endif %}>{{ item.value }}</option>{% endfor %}
+                                                </select>
+                                            {% elif data_type.display_type == 'boolean' %}
+                                                <select name="value" class="form-control form-control-sm mr-2">
+                                                    <option value="">-- None --</option>
+                                                    <option value="1" {% if final_value == '1' %}selected{% endif %}>Yes</option>
+                                                    <option value="0" {% if final_value == '0' %}selected{% endif %}>No</option>
+                                                </select>
+                                            {% else %}
+                                                <input type="{{ data_type.display_type|replace('integer', 'number')|replace('float', 'number') }}" name="value" class="form-control form-control-sm mr-2" value="{{ final_value or '' }}">
+                                            {% endif %}
+                                            <button type="submit" class="btn btn-sm btn-success" title="Save value">✓</button>
+                                        </form>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {# --- "ACTIONS" COLUMN --- #}
+                                {% if is_locked_from_above %}
+                                    <em class="text-muted">Locked by parent</em>
+                                {% elif is_own_def and is_enforced_not_final %}
+                                    <em class="text-muted" title="This is a contract for children to fulfill.">Contract Only</em>
+                                {% else %}
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('main.manage_specification', spec_def_id=definition.id, category_id=category.category_id) }}" class="btn btn-outline-secondary">
+                                            {{ 'Edit' if is_own_def else 'Override' }}
+                                        </a>
+                                        
+                                        {% if is_effective_final %}
+                                            {# Show Un-Finalize if the rule is final and was set here #}
+                                            {% if is_own_def or rule_override %}
+                                            <button class="btn btn-outline-warning js-unfinalize-spec" data-cat-id="{{ category.category_id }}" data-def-id="{{ definition.id }}">Un-Finalize</button>
+                                            {% endif %}
+                                        {% elif is_effective_enforced %}
+                                            <button class="btn btn-outline-primary js-finalize-spec" 
+                                                    data-cat-id="{{ category.category_id }}" 
+                                                    data-def-id="{{ definition.id }}"
+                                                    {{ 'disabled' if not final_value or category.children }}
+                                                    title="{{ 'Finalize with current value' if final_value and not category.children else ('Set a value before Finalizing' if not final_value else 'Cannot Finalize on a category with children') }}">
+                                                Finalize
+                                            </button>
+                                        {% endif %}
+
+                                        {% if not is_own_def and not is_effective_enforced %}
+                                            <form method="POST" action="{{ url_for('main.hide_spec_def', category_id=category.category_id, spec_def_id=definition.id) }}" class="d-inline">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-outline-warning">Hide</button>
+                                            </form>
+                                        {% endif %}
+
+                                        {% if is_own_def %}
+                                            <form method="POST" action="{{ url_for('main.delete_specification_definition', spec_def_id=definition.id) }}" class="d-inline">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-danger">Delete</button>
+                                            </form>
+                                        {% endif %}
+                                    </div> 
+                                {% endif %} 
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                    <p class="text-muted text-center"><em>No specifications defined or inherited for this category.</em></p>
+                {% endif %}
+            </div>
+            {% if category.children %}
+                <div class="ml-4 card-footer">
+                    {{ render_category_tree(category.children, get_definitions_for_categories, get_default_values_for_categories) }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% endmacro %}
+
+
+{# MAIN TEMPLATE CONTENT #}
+
+{% block title %}Manage Categories{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-3">Existing Categories</h2>
+            {% if all_categories %}
+                {{ render_category_tree(all_categories, get_definitions_for_categories, get_default_values_for_categories) }}
+            {% else %}
+                <div class="alert alert-info">No categories found. Create one below to get started.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <hr class="my-5">
+
+    <div class="row" id="edit-form">
+        <div class="col-md-8 offset-md-2">
+            
+            {% if edit_category %}
+                <h3>Edit Category "{{ edit_category.name }}"</h3>
+            {% else %}
+                <h3>Create New Category</h3>
+            {% endif %}
+            
+            <form method="POST" action="{{ url_for('main.manage_categories', edit_cat=edit_category.category_id if edit_category else None) }}">
+                {{ form.hidden_tag() }}
+                <div class="form-group">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="form-control") }}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.parent_id.label(class="form-label") }}
+                    {% if edit_category %}
+                        <p class="form-control-plaintext"><strong>{{ edit_category.parent.name if edit_category.parent else '-- None (Top-Level Category) --' }}</strong></p>
+                    {% else %}
+                        {{ form.parent_id(class="form-control") }}
+                    {% endif %}
+                </div>
+                
+                
+                <hr>
+                {% if edit_category %}
+                    <button type="submit" class="btn btn-primary">Update Category</button>
+                    <a href="{{ url_for('main.manage_categories') }}" class="btn btn-light">Cancel</a>
+                {% else %}
+                    <button type="submit" class="btn btn-success">Create Category</button>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+
+{% block scripts %}
+    <style>
+        .color-swatch { display: inline-block; width: 20px; height: 20px; border: 1px solid #ccc; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+    </style>
+    <script src="{{ url_for('static', filename='js/category_manager.js') }}"></script>
+{% endblock %}

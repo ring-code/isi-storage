@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if not is_edit_mode %}
+        Create New Specification for {{ category.name }}
+    {% elif is_base_edit %}
+        Edit Specification: {{ spec_def.name }}
+    {% else %}
+        Override Rules for {{ spec_def.name }} on {{ category.name }}
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        
+        {# --- DYNAMIC HEADER --- #}
+        {% if not is_edit_mode %}
+            <h3>Create New Specification</h3>
+            <p class="text-muted">For category: <a href="{{ url_for('main.manage_categories') }}">{{ category.name }}</a></p>
+        {% elif is_base_edit %}
+            <h3>Edit Specification: <strong>{{ spec_def.name }}</strong></h3>
+            <p class="text-muted">You are editing the base definition on category: <a href="{{ url_for('main.manage_categories') }}">{{ spec_def.category.name }}</a></p>
+        {% else %}
+            <h3>Override Rules for: <strong>{{ spec_def.name }}</strong></h3>
+            <p class="text-muted">You are creating/editing an override on the child category: <a href="{{ url_for('main.manage_categories') }}">{{ category.name }}</a></p>
+        {% endif %}
+
+        {# --- READ-ONLY INFO BLOCK (for edit modes) --- #}
+        {% if is_edit_mode %}
+        <div class="card bg-light mb-4">
+            <div class="card-body">
+                {% if spec_def.attribute %}
+                    <p class="mb-1"><strong>Sync Status:</strong> 🔗 Synced to Global Attribute <a href="{{ url_for('definitions.view_attributes') }}">'{{ spec_def.attribute.name }}'</a></p>
+                {% else %}
+                    <p class="mb-1"><strong>Sync Status:</strong> Not Synced</p>
+                {% endif %}
+                
+                {# --- FIX: Correctly display data type and option list --- #}
+                <p class="mb-1"><strong>Data Type:</strong> {{ effective_data_type.name if effective_data_type else 'N/A' }}</p>
+                {% if effective_option_list %}
+                    <p class="mb-0"><strong>Uses Option List:</strong> <a href="{{ url_for('definitions.edit_option_list', list_id=effective_option_list.id) }}">'{{ effective_option_list.name }}'</a></p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- THE UNIFIED FORM -->
+        <form method="POST" id="spec-form">
+            {{ form.hidden_tag() }}
+            
+            {# --- CREATE MODE --- #}
+            {% if not is_edit_mode %}
+            <div id="create-mode-fields">
+                <div class="form-group">
+                    {{ form.linked_attribute.label(class="form-label") }}
+                    {{ form.linked_attribute(class="form-control") }}
+                </div>
+
+                <div id="unsynced-fields">
+                    <div class="form-group">
+                        {{ form.name.label(class="form-label") }}
+                        {{ form.name(class="form-control") }}
+                    </div>
+                    <hr>
+                    <h5>Data Source</h5>
+                    <div class="form-group">
+                        {{ form.option_list.label(class="form-label") }}
+                        {{ form.option_list(class="form-control") }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.data_type.label(class="form-label") }}
+                        {{ form.data_type(class="form-control") }}
+                    </div>
+                </div>
+            </div>
+            {% else %} {# EDIT MODE #}
+                <div class="form-group">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="form-control", readonly=(spec_def.attribute or not is_base_edit)) }}
+                    {% if spec_def.attribute %}<small class="form-text text-warning">Name is controlled by the synced attribute.</small>{% endif %}
+                    {% if not is_base_edit %}<small class="form-text text-warning">Name cannot be changed on an inherited specification.</small>{% endif %}
+                </div>
+            {% endif %}
+            <hr>
+
+            {# --- UNIFIED INHERITANCE RULES --- #}
+            <h5>Inheritance Rules</h5>
+            <div class="form-check">
+                {{ form.is_inheritable(class="form-check-input") }}
+                {{ form.is_inheritable.label(class="form-check-label") }}
+            </div>
+            <div class="form-check">
+                {{ form.requires_implementation(class="form-check-input") }}
+                {{ form.requires_implementation.label(class="form-check-label") }}
+            </div>
+             <div class="form-check">
+                {% set is_final_locked_by_parent = is_edit_mode and not is_base_edit and spec_def.forbid_override %}
+                {{ form.forbid_override(class="form-check-input", disabled=is_final_locked_by_parent) }}
+                {{ form.forbid_override.label(class="form-check-label") }}
+                {% if is_final_locked_by_parent %}<small class="form-text text-warning">This rule was made Final by a parent and cannot be changed.</small>{% endif %}
+            </div>
+            <hr>
+            
+            {# --- UNIFIED DEFAULT VALUE --- #}
+            <div id="default-value-section-wrapper">
+                <h5>Set Default Value <span id="default-value-optional-text">(Optional)</span></h5>
+                <div class="form-group" id="default-value-container"></div>
+                <hr>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Save Specification</button>
+            <a href="{{ url_for('main.manage_categories') }}" class="btn btn-light">Cancel</a>
+        </form>
+
+        {# --- SYNC/UNLINK ACTIONS (for base edit mode only) --- #}
+        {% if is_base_edit %}
+        <hr class="my-4">
+        <div class="card">
+            <div class="card-body">
+                {% if spec_def.attribute %}
+                    <h5 class="card-title">Actions</h5>
+                    <form method="POST" action="{{ url_for('main.unsync_specification', spec_def_id=spec_def.id) }}" onsubmit="return confirm('Are you sure?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-warning">Unlink from Global Attribute</button>
+                    </form>
+                {% else %}
+                    <h5 class="card-title">Sync with Global Attribute</h5>
+                    <form method="POST" action="{{ url_for('main.sync_specification', spec_def_id=spec_def.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-info">Attempt to Sync Now</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+    <style>
+        .color-swatch { display: inline-block; width: 20px; height: 20px; border: 1px solid #ccc; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+    </style>
+    <script src="{{ url_for('static', filename='js/dynamic_inputs.js') }}"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const specForm = document.getElementById('spec-form');
+        if (!specForm) return;
+
+        // --- CONTEXT & UI ELEMENTS ---
+        const isEditMode = {{ is_edit_mode|tojson|safe }};
+        const isBaseEdit = {{ is_base_edit|tojson|safe }};
+        const hasChildren = {{ (category.children|length > 0)|tojson|safe }};
+        
+        const valueContainer = document.getElementById('default-value-container');
+        const defaultValueSection = valueContainer.parentElement;
+
+        const inheritableCheckbox = document.getElementById('is_inheritable');
+        const enforceCheckbox = document.getElementById('requires_implementation');
+        const finalCheckbox = document.getElementById('forbid_override');
+        const optionalText = document.getElementById('default-value-optional-text');
+
+        function updateFullUIState() {
+            // --- Part 1: Determine what the DISABLED state SHOULD be ---
+            let inheritable_disabled = false;
+            let enforce_disabled = false;
+            let final_disabled = false;
+
+            if (isEditMode) {
+                if (isBaseEdit && hasChildren) { // Downstream Lock
+                    inheritable_disabled = true;
+                    enforce_disabled = true;
+                    final_disabled = true;
+                } else if (!isBaseEdit) { // Child Override Lock
+                    inheritable_disabled = true;
+                    enforce_disabled = true;
+                    final_disabled = !(enforceCheckbox.checked && !finalCheckbox.defaultChecked);
+                }
+            }
+
+            // Apply guided workflow on top of any locks
+            if (!inheritableCheckbox.checked) {
+                enforce_disabled = true;
+            }
+            if (!enforceCheckbox.checked) {
+                final_disabled = true;
+            }
+            
+            // APPLY final disabled states to the DOM
+            inheritableCheckbox.disabled = inheritable_disabled;
+            enforceCheckbox.disabled = enforce_disabled;
+            finalCheckbox.disabled = final_disabled;
+
+            // --- Part 2: Cascade the CHECKED state ---
+            if (enforceCheckbox.disabled) {
+                enforceCheckbox.checked = false;
+            }
+            if (finalCheckbox.disabled) {
+                finalCheckbox.checked = false;
+            }
+
+            // --- Part 3: Update the Value Field UI ---
+            const isEnforced = enforceCheckbox.checked;
+            const isFinal = finalCheckbox.checked;
+
+            if (isEnforced && !isFinal && (isBaseEdit || !isEditMode)) {
+                defaultValueSection.style.display = 'none';
+            } else {
+                defaultValueSection.style.display = 'block';
+            }
+            optionalText.innerHTML = isFinal ? '<span class="text-danger">(Required)</span>' : '(Optional)';
+        }
+
+        // --- INITIAL SETUP ---
+        [inheritableCheckbox, enforceCheckbox, finalCheckbox].forEach(cb => {
+            cb.addEventListener('change', updateFullUIState);
+        });
+        updateFullUIState();
+
+        // --- DYNAMIC DEFAULT VALUE RENDERER ---
+        function renderDefaultValue(source) {
+            const currentValue = source.currentValue || null;
+            if (source.option_list) {
+                DynamicInputs.renderFromOptionList(valueContainer, source.option_list, currentValue, 'default_value_ui');
+            } else if (source.data_type) {
+                DynamicInputs.renderSingleInput(valueContainer, source.data_type, currentValue, 'default_value_ui');
+            } else {
+                valueContainer.innerHTML = '';
+            }
+        }
+
+        // --- LOGIC FOR CREATE MODE ---
+        if (!isEditMode) {
+            const linkedAttrSelect = document.getElementById('linked_attribute');
+            const unsyncedNameGroup = document.querySelector('#unsynced-fields .form-group'); // More specific selector
+            const optionListSelect = document.getElementById('option_list');
+            const dataTypeGroup = document.querySelector('#data_type')?.closest('.form-group'); // Find the whole group
+            
+            const attributeDataMap = JSON.parse('{{ attribute_data_map_json|safe }}');
+            const dataTypeMap = JSON.parse('{{ data_type_map_json|safe }}');
+            const optionListMap = JSON.parse('{{ option_list_map_json|safe }}');
+
+            function updateCreateForm() {
+                const isSynced = linkedAttrSelect.value && linkedAttrSelect.value !== '__None';
+                const hasOptionList = optionListSelect.value && optionListSelect.value !== '__None';
+
+                // Rule 1: Show/hide the 'Name' field based on sync status.
+                unsyncedNameGroup.style.display = isSynced ? 'none' : 'block';
+                
+                // Rule 2: Show/hide the 'Option List' select based on sync status.
+                optionListSelect.closest('.form-group').style.display = isSynced ? 'none' : 'block';
+                
+                // Rule 3: The 'Data Type' dropdown is visible if NOT synced AND no option list is chosen.
+                dataTypeGroup.style.display = (isSynced || hasOptionList) ? 'none' : 'block';
+
+                let source = {};
+                if (isSynced) {
+                    const attrDetails = attributeDataMap[linkedAttrSelect.value];
+                    if (attrDetails) {
+                       source.option_list = attrDetails.option_list;
+                       source.data_type = attrDetails.data_type;
+                    }
+                } else { // Unsynced
+                    if (hasOptionList) {
+                        source.option_list = optionListMap[optionListSelect.value];
+                    } else if (dataTypeGroup.querySelector('select').value) {
+                        source.data_type = dataTypeMap[dataTypeGroup.querySelector('select').value];
+                    }
+                }
+                renderDefaultValue(source);
+            }
+            // Attach listeners to all three dropdowns
+            linkedAttrSelect.addEventListener('change', updateCreateForm);
+            optionListSelect.addEventListener('change', updateCreateForm);
+            dataTypeGroup.querySelector('select').addEventListener('change', updateCreateForm);
+            updateCreateForm(); // Initial run
+        }
+
+        // --- LOGIC FOR EDIT MODE ---
+        if (isEditMode) {
+            renderDefaultValue({
+                option_list: {{ effective_option_list_json|safe if effective_option_list_json != 'null' else 'null' }},
+                data_type: {{ effective_data_type_json|safe if effective_data_type_json != 'null' else 'null' }},
+                currentValue: {{ current_value|tojson|safe }}
+            });
+        }
+    });
+    </script>
+{% endblock %}

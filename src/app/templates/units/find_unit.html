@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Find Unit{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <h2 class="text-center mb-4">Find a Unit</h2>
+
+        <div class="form-group">
+            <label for="unit-search-input" class="sr-only">Search by Serial Number</label>
+            <input type="text"
+                   class="form-control form-control-lg"
+                   id="unit-search-input"
+                   placeholder="Start typing a serial number..."
+                   autocomplete="off"
+                   autofocus>
+        </div>
+
+        {# This is where the JavaScript will inject the live search results #}
+        <div id="search-results-container" class="list-group mt-3">
+            <!-- Results will be populated here -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/unit_finder.js') }}"></script>
+{% endblock %}

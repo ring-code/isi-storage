@@ -1,0 +1,74 @@
+services:
+  #########################################
+  # ISI BACKEND + DATABASE
+  #########################################
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - storage_network 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d ${POSTGRES_DB} -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  isi_storage:
+    build: ./src
+    container_name: isi_storage
+    restart: unless-stopped
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    ports:
+      # Web UI port
+      - "5050:5050"
+    volumes:
+    # bind mount for dev, change to named for production
+      - ./src:/app
+    environment:
+      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL}
+      DEFAULT_ADMIN_USER: ${DEFAULT_ADMIN_USER}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      WP_API_BASE_URL: ${WP_API_BASE_URL} 
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
+    secrets:
+      - default_admin_password
+      - storage_secret_key
+      - postgres_password
+      - isi_sync_api_key
+    # reload + debug flag for dev. change for production
+    command: gunicorn --workers 4 --bind 0.0.0.0:5050 --reload --log-level=debug --access-logfile=- run:app
+    networks:
+        - storage_network
+
+#########################################
+# NETWORKS & VOLUMES
+#########################################
+networks:
+  storage_network:
+    name: storage_network
+    driver: bridge
+
+volumes:
+  postgres_data:
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  default_admin_password:
+    file: ./secrets/default_admin_password.txt
+  storage_secret_key:
+    file: ./secrets/storage_secret_key.txt
+  isi_sync_api_key:
+    file: ./secrets/isi_sync_api_key.txt

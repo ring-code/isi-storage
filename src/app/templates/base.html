@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}ISI Storage{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=2">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+
+<body>
+    <!-- Navigation bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="{{ url_for('main.home') }}">ISI Storage</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mx-auto text-center">
+                {% if current_user.is_authenticated %}
+                    {% if current_user.is_admin() %}
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.manage_roles') }}">Manage Roles</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('definitions.manage_data_types') }}">Data Types</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('definitions.manage_option_lists') }}">Lists</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('definitions.view_attributes') }}">Attributes</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('main.manage_categories') }}">Categories/Specs</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('sales.manage_grades') }}">Grades</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('main.view_products') }}">Products</a></li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="unitsDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Units
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="unitsDropdown">
+                                <a class="dropdown-item" href="{{ url_for('main.create_single_unit') }}">Create Single Unit</a>
+                                <a class="dropdown-item" href="{{ url_for('main.batch_create_units') }}">Batch Create Units</a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="{{ url_for('main.find_unit') }}">Find Unit</a>
+                                <a class="dropdown-item" href="{{ url_for('inventory.scan_tag') }}">Scan Tag</a>
+                            </div>
+                        </li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('sales.manage_shop_categories') }}">Shop Categories</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('sales.view_public_products') }}">WC Products</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('sales.list_unfulfilled_orders') }}">Orders</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('sales.list_bookings') }}">Bookings</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('sales.view_customers') }}">Customers</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('inventory.manage_spaces') }}">Spaces</a></li>
+
+
+                        
+                    {% elif current_user.is_manager() %}
+                        <!-- to be updated -->
+                        
+                    {% elif current_user.is_user() %}
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('main.find_unit') }}">Find Unit</a></li>
+                    {% endif %}
+                {% endif %}
+            </ul>
+
+            <!-- GROUP 2: RIGHT ALIGNED LINKS (Login/Logout) -->
+            <ul class="navbar-nav">
+                {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-outline-secondary ml-2" href="{{ url_for('auth.logout') }}">Logout</a>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <div class="container-fluid mt-4">
+        {% block content %}
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+            </table>
+        </div>
+        {% endblock %}
+    </div>
+    
+
+    <!-- Messages -->
+    <div class="container mt-2">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}" role="alert">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Bootstrap -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- sortable tables, clickable rows, qrcode viewer -->
+    <script src="{{ url_for('static', filename='js/tablesort.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/clickable_rows.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/qrcode.min.js') }}"></script>
+        
+    
+    <script>
+        // global utility
+        document.addEventListener('DOMContentLoaded', function() {           
+            
+            // this allows sorting like "Item 1, Item 2, Item 10" instead of "Item 1, Item 10, Item 2"
+            if (typeof Tablesort !== 'undefined') {
+                Tablesort.extend('natural', function(item) {
+                    // return false here so it doesn't try to apply this to every column automatically.
+                    // trigger it manually using <th data-sort-method="natural">
+                    return false; 
+                }, function(a, b) {
+                    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+                });
+
+                // Initialize all tables with class .sortable-table
+                document.querySelectorAll('.sortable-table').forEach(function(table) {
+                    new Tablesort(table);
+                });
+            }
+
+            initializeClickableRows('.clickable-rows');
+        });
+        // cache buster for css
+        const mainStylesheet = document.querySelector('link[href*="styles.css"]');
+        if (mainStylesheet) {
+            mainStylesheet.href += '?' + new Date().getTime();
+        }
+    </script>
+
+  
+    
+    
+
+    {% block scripts %}{% endblock %}
+    
+</body>
+</html>

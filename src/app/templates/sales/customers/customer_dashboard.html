@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Customer: {{ customer.first_name }} {{ customer.last_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        
+        {# --- LEFT COLUMN: Customer Info & Addresses --- #}
+        <div class="col-md-4">
+            
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Contact Info</h4>
+                    <a href="{{ url_for('sales.manage_customer', customer_id=customer.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+                </div>
+                <div class="card-body">
+                    <h5>{{ customer.first_name }} {{ customer.last_name }}</h5>
+                    <p class="mb-1"><strong>Email:</strong> {{ customer.email }}</p>
+                    <p class="mb-0"><strong>Phone:</strong> {{ customer.phone or 'Not provided' }}</p>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Addresses</h4>
+                    <a href="{{ url_for('sales.manage_address', customer_id=customer.id) }}" class="btn btn-sm btn-success">+ Add</a>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for address in customer.addresses %}
+                            <li class="list-group-item">
+                                <strong>{{ address.first_name }} {{ address.last_name }}</strong><br>
+                                {{ address.address_line_1 }}<br>
+                                {% if address.address_line_2 %}{{ address.address_line_2 }}<br>{% endif %}
+                                {{ address.postcode }} {{ address.city }}<br>
+                                {{ address.country }}
+                                <div class="mt-2 text-right">
+                                    <a href="{{ url_for('sales.manage_address', customer_id=customer.id, address_id=address.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                </div>
+                            </li>
+                        {% else %}
+                            <li class="list-group-item text-muted">No addresses saved.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        {# --- RIGHT COLUMN: Order History --- #}
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Order History</h4>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 sortable-table clickable-rows">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th><span class="sort-handle">Order ID</span></th>
+                                    <th><span class="sort-handle">Date</span></th>
+                                    <th><span class="sort-handle">Type</span></th>
+                                    <th><span class="sort-handle">Status</span></th>
+                                    <th><span class="sort-handle">Total</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in customer.orders|sort(attribute='created_at', reverse=True) %}
+
+                                <tr data-href="{{ url_for('sales.add_items_to_order', customer_order_id=order.id) }}"> 
+                                    <td><strong>#{{ order.wc_order_id or order.id }}</strong></td>
+                                    <td>{{ order.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td><span class="badge badge-secondary">{{ order.order_type|capitalize }}</span></td>
+                                    <td><span class="badge badge-info">{{ order.status }}</span></td>
+                                    <td>€{{ '%.2f'|format(order.grand_total) }}</td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="5" class="text-center text-muted">No orders found for this customer.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if customer %}Edit Customer: {{ customer.first_name }} {{ customer.last_name }}{% else %}Add New Customer{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        
+        <div class="mb-3">
+            <a href="{% if customer %}{{ url_for('sales.customer_dashboard', customer_id=customer.id) }}{% else %}{{ url_for('sales.view_customers') }}{% endif %}" class="btn btn-outline-secondary btn-sm">
+                &larr; Back
+            </a>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">
+                    {% if customer %}
+                        Edit Customer
+                    {% else %}
+                        Add New Customer
+                    {% endif %}
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            {{ form.first_name.label(class="form-label font-weight-bold") }}
+                            {{ form.first_name(class="form-control" + (" is-invalid" if form.first_name.errors else "")) }}
+                            {% for error in form.first_name.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="form-group col-md-6">
+                            {{ form.last_name.label(class="form-label font-weight-bold") }}
+                            {{ form.last_name(class="form-control" + (" is-invalid" if form.last_name.errors else "")) }}
+                            {% for error in form.last_name.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.email.label(class="form-label font-weight-bold") }}
+                        {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+                        <small class="form-text text-muted">This must be unique. It is used as the primary identifier.</small>
+                        {% for error in form.email.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.phone.label(class="form-label font-weight-bold") }}
+                        {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else "")) }}
+                        {% for error in form.phone.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <hr class="mt-4 mb-4">
+                    
+                    {{ form.submit(class="btn btn-primary btn-lg btn-block") }}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

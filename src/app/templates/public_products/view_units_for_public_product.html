@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Units for {{ public_product.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2>Units for Public Product: <strong>{{ public_product.name }}</strong></h2>
+            
+            {% set grade = rental_grades.filter_by(id=public_product.grade_id).first() if public_product.grade_type == 'rental_grade' else sale_grades.filter_by(id=public_product.grade_id).first() %}
+            <p class="text-muted">
+                Grade: 
+                {% if grade and grade.color %}
+                    <span class="color-swatch" style="background-color:{{ grade.color }};"></span>
+                {% endif %}
+                {{ grade.name if grade else 'N/A' }}
+            </p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0 clickable-rows sortable-table">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th data-sort-method="natural">
+                                <span class="sort-handle">Serial Number</span>
+                            </th>
+                            <th><span class="sort-handle">Internal SKU</span></th>
+                            <th><span class="sort-handle">Condition</span></th>
+                            <th><span class="sort-handle">Location</span></th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for unit in units %}
+                        <tr data-href="{{ url_for('main.edit_unit', unit_id=unit.unit_id) }}">
+                            <td>
+                                {% set unit_grade = unit.rental_grade or unit.sale_grade %}
+                                {% if unit_grade and unit_grade.color %}
+                                    <span class="color-swatch" style="background-color:{{ unit_grade.color }};"></span>
+                                {% endif %}
+                                <strong>{{ unit.serial_number }}</strong>
+                            </td>
+                            <td>{{ unit.product.name }}</td>
+                            <td>{{ unit.condition|replace('_', ' ')|title }}</td>
+                            <td>{{ unit.space.name if unit.space else '--' }}</td>
+                            <td class="text-right">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('main.edit_unit', unit_id=unit.unit_id) }}" class="btn btn-secondary">View/Edit</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">
+                                <em>No units found for this Public Product.</em>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

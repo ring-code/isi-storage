@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if product %}
+        Edit Product SKU: {{ product.name }}
+    {% else %}
+        Create New Product SKU
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h3>
+            {% if product %}
+                Edit Product SKU: <strong>{{ product.name }}</strong>
+            {% else %}
+                Create New Product SKU
+            {% endif %}
+        </h3>
+        <p class="text-muted">
+            {% if not product %}Start by selecting a category to load its properties.{% endif %}
+        </p>
+
+        <form method="POST" enctype="multipart/form-data" id="product-form"
+              data-category-details-url-template="{{ category_details_url_template }}">
+            {{ form.hidden_tag() }}
+
+            <!-- Categorization -->
+            <div class="card mb-4">
+                <div class="card-header">1. Categorization</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        {{ form.category.label(class="form-label") }}
+                        {% if product %}
+                            <p class="form-control-plaintext"><strong>{{ product.category.name }}</strong> (Cannot be changed)</p>
+                            {{ form.category(class="d-none") }}
+                        {% else %}
+                            {{ form.category(class="form-control", id="category_select") }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- This container will be shown by JS (on create) or on page load (on edit) -->
+            <div id="dynamic-form-fields" style="display: {{ 'block' if product else 'none' }};">
+                <!-- Core Details -->
+                <div class="card mb-4">
+                    <div class="card-header">2. Core Details</div>
+                    <div class="card-body">
+                        <div class="form-group">{{ form.name.label(class="form-label") }} {{ form.name(class="form-control", id="product_name_input") }}</div>
+                        <div class="form-group">{{ form.description_txt.label(class="form-label") }} {{ form.description_txt(class="form-control", rows=3) }}</div>
+                        
+                        <div class="form-group">
+                            {{ form.serial_number_prefix.label(class="form-label") }}
+                            {% if product %}
+                                {{ form.serial_number_prefix(class="form-control", readonly=True) }}
+                            {% else %}
+                                {{ form.serial_number_prefix(class="form-control") }}
+                            {% endif %}
+                            
+                            {% if product %}
+                                <small class="form-text text-warning">The Serial Number Prefix cannot be changed after creation.</small>
+                            {% else %}
+                                <small class="form-text text-muted">{{ form.serial_number_prefix.description }}</small>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {{ form.damage_template.label(class="form-label") }}
+                            {{ form.damage_template(class="form-control") }}
+                            <small class="form-text text-muted">Select a visual model for reporting damage on units of this SKU.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Production Cost -->
+                <div class="form-group">
+                    {{ form.standard_production_cost.label(class="form-label") }}
+                    {{ form.standard_production_cost(class="form-control") }}
+                    {% if form.standard_production_cost.errors %}
+                        {% for error in form.standard_production_cost.errors %}
+                            <small class="form-text text-danger">{{ error }}</small>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+
+                <!-- Specifications -->
+                <div class="card mb-4">
+                    <div class="card-header">3. Specifications</div>
+                    <div class="card-body" id="specifications-container">
+                        <p class="text-muted"><em>Loading specifications...</em></p>
+                    </div>
+                </div>
+
+                <!--  Shop Categories  -->
+                <div class="card mb-4">
+                    <div class="card-header">4. Public Display</div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            {{ form.shop_categories.label(class="form-label") }}
+                            {# 
+                               We add the size attribute for better usability.
+                               The choices are populated from the route.
+                            #}
+                            {{ form.shop_categories(class="form-control", size=10) }}
+                            <small class="form-text text-muted">{{ form.shop_categories.description }}</small>
+                            {% for error in form.shop_categories.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Photos -->
+                <div class="card mb-4">
+                    <div class="card-header">5. Photos</div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            {{ form.photos.label(class="form-label") }}
+                            {{ form.photos(class="form-control-file") }}
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success btn-lg">
+                    {% if product %}Update Product SKU{% else %}Create Product SKU{% endif %}
+                </button>
+            </div>
+            
+            <a href="{{ url_for('main.view_products') }}" class="btn btn-light">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dynamic_inputs.js') }}"></script>
+<script src="{{ url_for('static', filename='js/product_form_manager.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const productForm = document.getElementById('product-form');
+    if (!productForm) return;
+
+    const categoryDetailsUrlTemplate = productForm.dataset.categoryDetailsUrlTemplate;
+    const isEditMode = {{ 'true' if product else 'false' }};
+
+    const containerIds = {
+        dynamicRoot: 'dynamic-form-fields',
+        coreDetails: {
+            name: 'product_name_input'
+        },
+        specifications: 'specifications-container'
+    };
+
+    const existingValues = {
+        isEditMode: isEditMode,
+        specs: {{ spec_values|tojson|safe if spec_values else "{}" }},
+        attrs: {{ attr_values|tojson|safe if attr_values else "{}" }}
+    };
+
+    if (isEditMode) {
+        {% if product %}
+        const categoryId = {{ product.category_id | tojson | safe }};
+        const initialDataUrl = categoryDetailsUrlTemplate.replace('CATEGORY_ID', categoryId);
+        ProductFormManager.initOnLoad(initialDataUrl, containerIds, existingValues, 'dynamic-form-fields');
+        {% endif %}
+    } else {
+        ProductFormManager.init(
+            categoryDetailsUrlTemplate,
+            'CATEGORY_ID',
+            'category_select',
+            containerIds,
+            existingValues,
+            'dynamic-form-fields'
+        );
+    }
+});
+</script>
+{% endblock %}

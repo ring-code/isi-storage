@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Add Items to Order #{{ customer_order.id }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+         <h3>Order #{{ customer_order.id }} - {{ customer_order.order_type|title }}
+            <span class="badge badge-secondary">{{ customer_order.status }}</span>
+        </h3>
+        <div class="d-flex justify-content-between text-muted mb-4">
+            <span>Customer: 
+                {% if customer_order.customer %}
+                    <a href="{{ url_for('sales.customer_dashboard', customer_id=customer_order.customer.id) }}">
+                        <strong>{{ customer_order.customer.first_name }} {{ customer_order.customer.last_name }}</strong>
+                    </a>
+                {% else %}
+                    <strong>Guest</strong>
+                {% endif %}
+            </span>
+            {% if customer_order.order_type == 'rental' %}
+                <span>Period: {{ customer_order.start_date.strftime('%Y-%m-%d') }} to {{ customer_order.end_date.strftime('%Y-%m-%d') }}</span>
+            {% endif %}
+        </div>
+        
+        <!-- FORM TO ADD NEW ITEM -->
+        {% if customer_order.status == 'Draft' %}
+            <div class="card mb-4">
+                <div class="card-header">Add New Item</div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('sales.add_items_to_order', customer_order_id=customer_order.id) }}" class="form-inline">
+                        {{ form.hidden_tag() }}
+                        <div class="form-group mb-2 mr-sm-2 flex-grow-1">
+                            {{ form.public_product.label(class="sr-only") }}
+                            {{ form.public_product(class="form-control w-100", id="public_product_select") }}
+                        </div>
+                        <div class="form-group mb-2 mr-sm-2 flex-grow-1">
+                            {{ form.public_variation.label(class="sr-only") }}
+                            {{ form.public_variation(class="form-control w-100", id="public_variation_select") }}
+                        </div>
+                        <div class="form-group mb-2 mr-sm-2">
+                            {{ form.quantity.label(class="sr-only") }}
+                            {{ form.quantity(class="form-control", style="width: 80px;") }}
+                        </div>
+                        <button type="submit" class="btn btn-primary mb-2">{{ form.submit.label }}</button>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- LIST OF CURRENT ITEMS & TOTALS -->
+        <div class="card">
+            <div class="card-header">Current Items</div>
+            <ul class="list-group list-group-flush">
+                {% for item in customer_order.order_items %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ item.public_variation.public_product.name }}</strong><br>
+                        <small class="text-muted">Variation: {{ item.public_variation.manufacturing_product.name }}</small>
+                    </div>
+                    <div>
+                        {% if customer_order.order_type == 'rental' %}
+                            <span>{{ item.quantity }} unit(s)</span>
+                        {% else %}
+                            <span>{{ item.quantity }} x €{{ '%.2f'|format(item.price_per_item) }}</span>
+                        {% endif %}
+                        <strong class="ml-3">€{{ '%.2f'|format(item.line_total) }}</strong>
+
+                        {% if customer_order.status == 'Draft' %}
+                            <form method="POST" action="{{ url_for('sales.remove_item_from_order', customer_order_id=customer_order.id, order_item_id=item.id) }}" class="ml-3" onsubmit="return confirm('Remove this item from the order?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-danger">&times;</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </li>
+                {% else %}
+                <li class="list-group-item text-center text-muted"><em>No items have been added to this order yet.</em></li>
+                {% endfor %}
+            </ul>
+    
+            <div class="card-footer">
+                <div class="row align-items-center">
+                    
+                    {# --- Part 1: Discount Form (Left Side) --- #}
+                    <div class="col-md-7">
+                        <form method="POST" action="{{ url_for('sales.apply_discount', customer_order_id=customer_order.id) }}">
+                            {{ discount_form.hidden_tag() }}
+                            <div class="form-row">
+                                <div class="form-group col-sm-5 mb-sm-0">
+                                    {{ discount_form.discount_amount.label(class="sr-only") }}
+                                    {{ discount_form.discount_amount(class="form-control" ~ (' is-invalid' if discount_form.discount_amount.errors else ''), placeholder="Discount Amount (€)") }}
+                                </div>
+                                <div class="form-group col-sm-7 mb-sm-0">
+                                    {{ discount_form.discount_reason.label(class="sr-only") }}
+                                    {{ discount_form.discount_reason(class="form-control" ~ (' is-invalid' if discount_form.discount_reason.errors else ''), placeholder="Reason for discount") }}
+                                </div>
+                            </div>
+                            {# Show errors below the inputs if they exist #}
+                            {% if discount_form.discount_amount.errors or discount_form.discount_reason.errors %}
+                            <div class="mt-2">
+                                {% for error in discount_form.discount_amount.errors %}<small class="form-text text-danger">{{ error }}</small><br>{% endfor %}
+                                {% for error in discount_form.discount_reason.errors %}<small class="form-text text-danger">{{ error }}</small>{% endfor %}
+                            </div>
+                            {% endif %}
+                            <button type="submit" class="btn btn-secondary btn-block mt-2">{{ discount_form.submit.label }}</button>
+                        </form>
+            </div>
+
+            {# --- Part 2: Totals Display (Right Side) --- #}
+            <div class="col-md-5 text-right">
+                <p class="mb-1"><strong>Subtotal (Net):</strong> €{{ '%.2f'|format(customer_order.subtotal_net or 0) }}</p>
+                <p class="mb-1"><strong>Tax:</strong> €{{ '%.2f'|format(customer_order.tax_amount or 0) }}</p>
+                
+                {% if customer_order.discount_amount %}
+                <p class="mb-1 text-success">
+                    <strong>Discount ({{ customer_order.discount_reason|truncate(20) }}):</strong> 
+                    -€{{ '%.2f'|format(customer_order.discount_amount) }}
+                </p>
+                {% endif %}
+
+                <p class="h5 mb-0"><strong>Total:</strong> €{{ '%.2f'|format(customer_order.grand_total or 0) }}</p>
+            </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 d-flex justify-content-between align-items-center">
+    
+        {# --- LEFT SIDE: The "Back" button is always present --- #}
+        <div>
+            <a href="{{ url_for('sales.list_unfulfilled_orders') }}" class="btn btn-secondary btn-lg">Back to List</a>
+        </div>
+
+        {# --- RIGHT SIDE: The main action buttons --- #}
+        <div class="btn-toolbar">
+            
+            {# --- DESTRUCTIVE ACTION GROUP (Cancel/Revert) --- #}
+            <div class="btn-group mr-2">
+            {% if customer_order.status == 'Draft' %}
+                <form method="POST" action="{{ url_for('sales.cancel_order', customer_order_id=customer_order.id) }}" onsubmit="return confirm('Are you sure you want to cancel and delete this draft order?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger btn-lg">Cancel & Delete Draft</button>
+                </form>
+            {% elif customer_order.status == 'Pending Fulfillment' %}
+                <form method="POST" action="{{ url_for('sales.revert_to_draft', customer_order_id=customer_order.id) }}" onsubmit="return confirm('Revert this order to a draft? The reserved stock will be released.');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-warning btn-lg">Revert to Draft</button>
+                </form>
+            {% endif %}
+            </div>
+
+            {# --- CONSTRUCTIVE ACTION GROUP (Confirm/Fulfill) --- #}
+            <div class="btn-group">
+            {% if customer_order.status == 'Draft' %}
+                <form method="POST" action="{{ url_for('sales.confirm_order', customer_order_id=customer_order.id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-success btn-lg">Confirm Order & Reserve Stock</button>
+                </form>
+            {% elif customer_order.status == 'Pending Fulfillment' %}
+                <a href="{{ url_for('sales.fulfill_order', customer_order_id=customer_order.id) }}" class="btn btn-primary btn-lg">Proceed to Fulfillment</a>
+            {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+    
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const publicProductSelect = document.getElementById('public_product_select');
+    const variationSelect = document.getElementById('public_variation_select');
+    
+    // Data passed from the backend route
+    const variationMap = JSON.parse('{{ variation_map_json|safe }}');
+
+    function updateVariationDropdown() {
+        const selectedProductId = publicProductSelect.value;
+        
+        // Clear existing options
+        variationSelect.innerHTML = '';
+        variationSelect.disabled = true;
+
+        if (selectedProductId && variationMap[selectedProductId]) {
+            const variations = variationMap[selectedProductId];
+            
+            // Add a default blank option
+            variationSelect.add(new Option('-- Select Variation --', ''));
+
+            if (variations.length > 0) {
+                variations.forEach(var_ => {
+                    variationSelect.add(new Option(var_.name, var_.id));
+                });
+                variationSelect.disabled = false;
+            } else {
+                 variationSelect.options[0].text = '-- No variations available --';
+            }
+        } else {
+             variationSelect.add(new Option('-- Select a Sales Product First --', ''));
+        }
+    }
+
+    publicProductSelect.addEventListener('change', updateVariationDropdown);
+    // Run on page load in case of re-render with a value already selected
+    updateVariationDropdown();
+});
+</script>
+{% endblock %}

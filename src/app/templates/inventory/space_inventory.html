@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Inventory: {{ space.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="mb-3">
+        <a href="{{ url_for('inventory.manage_spaces') }}" class="btn btn-outline-secondary btn-sm">
+            &larr; Back to Spaces
+        </a>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Inventory Location: <span class="text-primary">{{ space.name }}</span></h2>
+            {% if space.description %}
+                <p class="text-muted mb-0">{{ space.description }}</p>
+            {% endif %}
+        </div>
+        <div>
+            <span class="badge badge-info p-2" style="font-size: 1.1rem;">Total Items: {{ units|length }}</span>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0 sortable-table clickable-rows">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th><span class="sort-handle">Serial Number</span></th>
+                            <th><span class="sort-handle">Product SKU</span></th>
+                            <th><span class="sort-handle">Grade</span></th>
+                            <th><span class="sort-handle">Condition</span></th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for unit in units %}
+                        <tr data-href="{{ url_for('main.edit_unit', unit_id=unit.unit_id) }}">
+                            <td><strong>{{ unit.serial_number }}</strong></td>
+                            <td>{{ unit.product.name }}</td>
+                            <td>
+                                {% if unit.rental_grade %}
+                                    <span class="badge badge-info border" {% if unit.rental_grade.color %}style="border-color: {{ unit.rental_grade.color }} !important;"{% endif %}>
+                                        Rental: {{ unit.rental_grade.name }}
+                                    </span>
+                                {% elif unit.sale_grade %}
+                                    <span class="badge badge-success border" {% if unit.sale_grade.color %}style="border-color: {{ unit.sale_grade.color }} !important;"{% endif %}>
+                                        Sale: {{ unit.sale_grade.name }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">--</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if unit.condition == 'available' %}
+                                    <span class="badge badge-success">Available</span>
+                                {% elif unit.condition == 'rented_out' %}
+                                    <span class="badge badge-warning">Rented Out</span>
+                                {% elif unit.condition == 'in_maintenance' %}
+                                    <span class="badge badge-danger">Maintenance</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">{{ unit.condition|replace('_', ' ')|title }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-right">
+                                <a href="{{ url_for('main.edit_unit', unit_id=unit.unit_id) }}" class="btn btn-secondary btn-sm">Manage Unit</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                <em>This space is currently empty.</em>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
