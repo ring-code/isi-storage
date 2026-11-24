@@ -69,7 +69,7 @@ Separates abstract product definitions ("blueprints") from physical warehouse it
   `Unit Override` $\rightarrow$ `Product SKU Override` $\rightarrow$ `Child Category Default` $\rightarrow$ `Parent Category Default`.
 * **Concrete vs. Abstract SKUs:**
   * **Concrete SKUs** satisfy all category specifications and can be mass-produced via **Batch Unit Creation**.
-  * **Abstract SKUs** leave one or more enforced specifications empty (e.g., a generic "Flat Cube" SKU whose color is only chosen per physical unit) and are fulfilled individually via **Single Unit Creation**.
+  * **Abstract SKUs** leave one or more enforced specifications empty (e.g., a generic Car SKU whose color is only chosen per physical unit) and are fulfilled individually via **Single Unit Creation**.
 * **Automated Attribute Sync Bridge (`sync_specs_to_attributes`):** Whenever a Product SKU is saved, resolved specifications linked to a global `Attribute` are automatically denormalized into `ProductAttribute` for fast querying and external syncing.
 
 ### 3. Physical Inventory, Spaces & Asset Tracking (`inventory`)
@@ -117,6 +117,7 @@ isi_storage/
 ├── docker-compose.yml          # Orchestrates postgres_db and isi_storage containers
 ├── setup_env.py                # Interactive setup wizard generating .env and /secrets
 ├── .env                        # Non-secret environment configuration (gitignored)
+├── .env.example                # ENV example for documentation
 ├── secrets/                    # Docker secret files (gitignored)
 │   ├── default_admin_password.txt
 │   ├── isi_sync_api_key.txt
